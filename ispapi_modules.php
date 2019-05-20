@@ -12,7 +12,7 @@ namespace ISPAPIWIDGET;
  * @license https://github.com/hexonet/whmcs-ispapi-widget-modules/blob/master/LICENSE/ MIT License
  */
 
-$module_version = "1.0.0";
+$module_version = "1.1.0";
 
 add_hook('AdminHomeWidgets', 1, function () {
     return new IspapiModulesWidget();
