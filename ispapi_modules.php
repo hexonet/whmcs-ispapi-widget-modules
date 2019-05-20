@@ -184,6 +184,24 @@ EOF;
         }
 
         // ####################################
+        // Premium DNS Version Check
+        // ####################################
+        $d = $this->getModuleData("premiumdns");
+        if ($d !== false) {
+            $path = ROOTDIR."/modules/servers/ispapipremiumdns/ispapipremiumdns.php";
+            if (file_exists($path)) {
+                require_once($path);
+                $modules[] = array(
+                    "title" => "ISPAPI Premium DNS Module",
+                    "version_used" => $module_version,
+                    "version_latest" => $d["version"],
+                    "url" => $d["url"],
+                    "imgurl" => $d["imgurl"]
+                );
+            }
+        }
+
+        // ####################################
         // Domain Import Module Version Check
         // ####################################
         $d = $this->getModuleData("domainimport");
