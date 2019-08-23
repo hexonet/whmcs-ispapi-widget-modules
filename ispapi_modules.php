@@ -1,5 +1,5 @@
 <?php
-namespace ISPAPIWIDGET;
+namespace ISPAPI;
 
 /**
  * WHMCS ISPAPI Modules Dashboard Widget
@@ -11,8 +11,6 @@ namespace ISPAPIWIDGET;
  * @copyright Copyright (c) Kai Schwarz, HEXONET GmbH, 2019
  * @license https://github.com/hexonet/whmcs-ispapi-widget-modules/blob/master/LICENSE/ MIT License
  */
-
-$module_version = "1.1.0";
 
 add_hook('AdminHomeWidgets', 1, function () {
     return new IspapiModulesWidget();
@@ -30,6 +28,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
     protected $cache = false;
     protected $cacheExpiry = 120;
     protected $requiredPermission = '';
+    const VERSION = "1.1.0";
 
     /**
      * return html code for error case specified by given error message
