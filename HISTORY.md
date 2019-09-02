@@ -1,3 +1,10 @@
+## [1.1.2](https://github.com/hexonet/whmcs-ispapi-widget-modules/compare/v1.1.1...v1.1.2) (2019-09-02)
+
+
+### Bug Fixes
+
+* **logo:** added module logo for internal purposes ([ae6e37e](https://github.com/hexonet/whmcs-ispapi-widget-modules/commit/ae6e37e))
+
 ## [1.1.1](https://github.com/hexonet/whmcs-ispapi-widget-modules/compare/v1.1.0...v1.1.1) (2019-08-23)
 
 

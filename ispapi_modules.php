@@ -28,7 +28,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
     protected $cache = false;
     protected $cacheExpiry = 120;
     protected $requiredPermission = '';
-    const VERSION = "1.1.1";
+    const VERSION = "1.1.2";
 
     /**
      * return html code for error case specified by given error message
