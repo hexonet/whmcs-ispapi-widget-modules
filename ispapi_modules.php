@@ -44,21 +44,131 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
 EOF;
     }
 
-    private function getModuleData($moduleid)
+    private function getGHModuleData($moduleid)
     {
+        $map = array(
+            "ispapibackorder" => array(
+                "id" => "whmcs-ispapi-backorder",
+                "status" => true
+            ),
+            "ispapipremiumdns" => array(
+                "id" => "whmcs-ispapi-premiumdns",
+                "status" => true
+            ),
+            "ispapissl" => array(
+                "id" => "whmcs-ispapi-ssl",
+                "status" => true
+            ),
+            "ispapidomaincheck" => array(
+                "id" => "whmcs-ispapi-domainchecker",
+                "status" => true
+            ),
+            "ispapi" => array(
+                "id" => "whmcs-ispapi-registrar",
+                "status" => true
+            ),
+            "ispapidpi" => array(
+                "id" => "whmcs-ispapi-pricingimporter",
+                "status" => true,
+                "replacedby" => "ispapiimporter"
+            ),
+            "ispapidomainimport" => array(
+                "id" => "whmcs-ispapi-domainimport",
+                "status" => true,
+                "replacedby" => "ispapiimporter"
+            ),
+            "ispapiimporter" => array(
+                "id" => "whmcs-ispapi-importer",
+                "status" => true
+            ),
+            "ispapi_account" => array(
+                "id" => "whmcs-ispapi-widget-account",
+                "status" => true
+            ),
+            "ispapi_modules" => array(
+                "id" => "whmcs-ispapi-widget-modules",
+                "status" => true
+            )
+        );
+        if (!array_key_exists($moduleid, $map)) {
+            return $moduleid;
+        }
+        return $map[$moduleid];
+    }
+
+    private function getWHMCSModuleVersion($whmcsmoduleid, $moduletype, $whmcslist)
+    {
+        switch ($moduletype) {
+            case "registrars":
+                $whmcslist->load($whmcsmoduleid);
+                $v = call_user_func($whmcsmoduleid . '_Get' . strtoupper($whmcsmoduleid) . 'ModuleVersion');
+                if (empty($v)) {
+                    $v = "0.0.0";
+                }
+                break;
+            case "addons":
+                $v = (\WHMCS\Module\Addon\Setting::module($whmcsmoduleid)->pluck("value", "setting"))["version"];
+                break;
+            case "servers":
+                $whmcslist->load($whmcsmoduleid);
+                $v = $whmcslist->getMetaDataValue("MODULEVersion");
+                if (empty($v)) {//old module
+                    $v = "0.0.0";
+                }
+                break;
+            case "widgets":
+                $whmcslist->load($whmcsmoduleid);
+                $tmp = explode("_", $whmcsmoduleid);
+                $widgetClass = "\\ISPAPI\\" . ucfirst($tmp[0]) . ucfirst($tmp[1]) . "Widget";
+                $mname=$tmp[0]."widget".$tmp[1];
+                if (class_exists($widgetClass) && defined("$widgetClass::VERSION")) {
+                    $v = $widgetClass::VERSION;
+                } else {
+                    $v = "0.0.0";
+                }
+                break;
+            default:
+                $v = "n/a";
+                break;
+        }
+        return $v;
+    }
+
+    private function getModuleData($whmcsmoduleid, $moduletype, $whmcslist)
+    {
+        $ghdata = $this->getGHModuleData($whmcsmoduleid);
+        $moduleid = $ghdata["id"];
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_TIMEOUT, 3);
-        curl_setopt($ch, CURLOPT_HEADER, 0);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch, CURLOPT_USERAGENT, 'ISPAPI MODULES WIDGET');
-        curl_setopt($ch, CURLOPT_URL, "https://raw.githubusercontent.com/hexonet/whmcs-ispapi-" . $moduleid . "/master/release.json");
+        curl_setopt_array($ch, array(
+            CURLOPT_TIMEOUT => 3,
+            CURLOPT_HEADER => 0,
+            CURLOPT_RETURNTRANSFER => 1,
+            CURLOPT_USERAGENT => 'ISPAPI MODULES WIDGET',
+            CURLOPT_URL => "https://raw.githubusercontent.com/hexonet/" . $moduleid . "/master/release.json"
+        ));
         $d = curl_exec($ch);
         curl_close($ch);
         if ($d !== false) {
-            $d = json_decode($d, true);
-            $d["url"] = "https://github.com/hexonet/whmcs-ispapi-" . $moduleid . "/raw/master/whmcs-ispapi-" . $moduleid . "-latest.zip";
-            $d["imgurl"] = "https://raw.githubusercontent.com/hexonet/whmcs-ispapi-" . $moduleid . "/master/module.png";
-            return $d;
+            $logopath = ROOTDIR. "/modules/" . $moduletype . "/" . $whmcsmoduleid ."/module.png";
+            if (!file_exists($logopath)) {
+                $logopath = "https://raw.githubusercontent.com/hexonet/" . $moduleid . "/master/module.png";
+            } else {
+                $logopath = \DI::make("asset")->getWebRoot() . "/modules/" . $moduletype . "/" . $whmcsmoduleid ."/module.png";
+            }
+            $d = json_decode($d, true);//404 could happen and will be returned as string
+            if ($d !== null) {
+                return array(
+                    "id" => $moduleid,
+                    "version_latest" => $d["version"],
+                    "version_used" => $this->getWHMCSModuleVersion($whmcsmoduleid, $moduletype, $whmcslist),
+                    "deprecated" => !$ghdata["status"],
+                    "urls" => array(
+                        "logo" => $logopath,
+                        "github" =>  "https://github.com/hexonet/" . $moduleid,
+                        "download" => "https://github.com/hexonet/" . $moduleid . "/raw/master/" . $moduleid . "-latest.zip"
+                    )
+                );
+            }
         }
         return false;
     }
@@ -66,18 +176,21 @@ EOF;
     private function getModuleHTML($module)
     {
         if ($module) {
-            $diff = version_compare($module["version_used"], $module["version_latest"]);
-            return (
-                '<div class="col-sm-4 text-center">' .
-                    '<div class="thumbnail">' .
-                        '<img style="width:120px; height: 120px" src="' . $module["imgurl"] . '" alt="' .  $module["title"] . '"/>' .
-                        (($diff < 0) ?
-                            '<div class="caption"><a class="textred" href="' . $module["url"] . '">v' . $module["version_used"] . '</a></div>' :
-                            '<div class="caption"><p class="textgreen">v' . $module["version_used"] . '</p></div>'
-                        ) .
-                    '</div>' .
-                '</div>'
-            );
+            $html = '<div class="col-sm-4 text-center">' .
+                        '<div class="thumbnail">' .
+                            '<img style="width:120px; height: 120px" src="' . $module["urls"]["logo"] . '" alt="' .  $module["id"] . '"/>';
+            if ($module["deprecated"]) {
+                $html .= '<div class="textred">DEPRECATED</div>';
+            } elseif ($module["version_used"]==="n/a") {
+                $html .= '<div class="textred">NOT INSTALLED</div>';
+            } else {
+                $html .= (
+                    (version_compare($module["version_used"], $module["version_latest"]) < 0) ?
+                    '<div><a class="textred" href="' . $module["urls"]["download"] . '">v' . $module["version_used"] . '</a></div>' :
+                    '<div class="textgreen">v' . $module["version_used"] . '</div>'
+                );
+            }
+            return $html . '</div></div>';
         }
         return '<div class="col-sm-4"></div>';
     }
@@ -88,133 +201,54 @@ EOF;
      */
     public function getData()
     {
+        global $CONFIG;
         $modules = array();
 
-        // ####################################
-        // Registrar Version Check
-        // ####################################
-        $d = $this->getModuleData("registrar");
-        if ($d !== false) {
-            $path = ROOTDIR."/modules/registrars/ispapi/ispapi.php";
-            if (file_exists($path)) {
-                require_once($path);
-                if (function_exists('ispapi_GetISPAPIModuleVersion')) {
-                    $modules[] = array(
-                        "title" => "ISPAPI Registrar Module",
-                        "version_used" => call_user_func('ispapi_GetISPAPIModuleVersion'),
-                        "version_latest" => $d["version"],
-                        "url" => $d["url"],
-                        "imgurl" => $d["imgurl"]
-                    );
+        // get registrar module versions
+        $registrar = new \WHMCS\Module\Registrar();
+        foreach ($registrar->getList() as $module) {
+            if (preg_match("/^ispapi/i", $module)) {
+                $registrar->load($module);
+                if ($registrar->isActivated()) {
+                    $md = $this->getModuleData($module, "registrars", $registrar);
+                    if ($md !== false) {
+                        $modules[] = $md;
+                    }
                 }
             }
         }
 
-        // ####################################
-        // Domainchecker Version Check
-        // ####################################
-        $d = $this->getModuleData("domainchecker");
-        if ($d !== false) {
-            $path = ROOTDIR."/modules/addons/ispapidomaincheck/ispapidomaincheck.php";
-            if (file_exists($path)) {
-                require_once($path);
-                $modules[] = array(
-                    "title" => "ISPAPI High Performance DomainChecker Module",
-                    "version_used" => $module_version,
-                    "version_latest" => $d["version"],
-                    "url" => $d["url"],
-                    "imgurl" => $d["imgurl"]
-                );
+        // get addon module versions
+        $activemodules = array_filter(explode(",", $CONFIG["ActiveAddonModules"]));
+        $addon = new \WHMCS\Module\Addon();
+        foreach ($addon->getList() as $module) {
+            if (in_array($module, $activemodules) && preg_match("/^ispapi/i", $module) && !preg_match("/\_addon$/i", $module)) {
+                $md = $this->getModuleData($module, "addons", $addon);
+                if ($md !== false) {
+                    $modules[] = $md;
+                }
             }
         }
 
-        // ####################################
-        // Backorder Version Check
-        // ####################################
-        $d = $this->getModuleData("backorder");
-        if ($d !== false) {
-            $path = ROOTDIR."/modules/addons/ispapibackorder/ispapibackorder.php";
-            if (file_exists($path)) {
-                require_once($path);
-                $modules[] = array(
-                    "title" => "ISPAPI Backorder Module",
-                    "version_used" => $module_version,
-                    "version_latest" => $d["version"],
-                    "url" => $d["url"],
-                    "imgurl" => $d["imgurl"]
-                );
+        // get server module versions
+        $server = new \WHMCS\Module\Server();
+        foreach ($server->getList() as $module) {
+            if (preg_match("/^ispapi/i", $module)) {
+                $md = $this->getModuleData($module, "servers", $server);
+                if ($md !== false) {
+                    $modules[] = $md;
+                }
             }
         }
 
-        // ####################################
-        // PricingImporter Version Check
-        // ####################################
-        $d = $this->getModuleData("pricingimporter");
-        if ($d !== false) {
-            $path = ROOTDIR."/modules/addons/ispapidpi/ispapidpi.php";
-            if (file_exists($path)) {
-                require_once($path);
-                $modules[] = array(
-                    "title" => "ISPAPI Pricing Importer Module",
-                    "version_used" => $module_version,
-                    "version_latest" => $d["version"],
-                    "url" => $d["url"],
-                    "imgurl" => $d["imgurl"]
-                );
-            }
-        }
-
-        // ####################################
-        // SSL Version Check
-        // ####################################
-        $d = $this->getModuleData("ssl");
-        if ($d !== false) {
-            $path = ROOTDIR."/modules/servers/ispapissl/ispapissl.php";
-            if (file_exists($path)) {
-                require_once($path);
-                $modules[] = array(
-                    "title" => "ISPAPI SSL Module",
-                    "version_used" => $module_version,
-                    "version_latest" => $d["version"],
-                    "url" => $d["url"],
-                    "imgurl" => $d["imgurl"]
-                );
-            }
-        }
-
-        // ####################################
-        // Premium DNS Version Check
-        // ####################################
-        $d = $this->getModuleData("premiumdns");
-        if ($d !== false) {
-            $path = ROOTDIR."/modules/servers/ispapipremiumdns/ispapipremiumdns.php";
-            if (file_exists($path)) {
-                require_once($path);
-                $modules[] = array(
-                    "title" => "ISPAPI Premium DNS Module",
-                    "version_used" => $module_version,
-                    "version_latest" => $d["version"],
-                    "url" => $d["url"],
-                    "imgurl" => $d["imgurl"]
-                );
-            }
-        }
-
-        // ####################################
-        // Domain Import Module Version Check
-        // ####################################
-        $d = $this->getModuleData("domainimport");
-        if ($d !== false) {
-            $path = ROOTDIR."/modules/addons/ispapidomainimport/ispapidomainimport.php";
-            if (file_exists($path)) {
-                require_once($path);
-                $modules[] = array(
-                    "title" => "ISPAPI Domain Import Module",
-                    "version_used" => $module_version,
-                    "version_latest" => $d["version"],
-                    "url" => $d["url"],
-                    "imgurl" => $d["imgurl"]
-                );
+        // get widget module versions
+        $widget = new \WHMCS\Module\Widget();
+        foreach ($widget->getList() as $module) {
+            if (preg_match("/^ispapi/i", $module)) {
+                $md = $this->getModuleData($module, "widgets", $widget);
+                if ($md !== false) {
+                    $modules[] = $md;
+                }
             }
         }
         return $modules;
