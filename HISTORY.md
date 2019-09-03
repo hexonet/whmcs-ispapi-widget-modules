@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/hexonet/whmcs-ispapi-widget-modules/compare/v1.1.2...v1.2.0) (2019-09-03)
+
+
+### Features
+
+* **listing:** review source code and introduce widgets in overview ([4bae880](https://github.com/hexonet/whmcs-ispapi-widget-modules/commit/4bae880))
+
 ## [1.1.2](https://github.com/hexonet/whmcs-ispapi-widget-modules/compare/v1.1.1...v1.1.2) (2019-09-02)
 
 
