@@ -45,7 +45,7 @@
     ],
     "devDependencies": {
         "semantic-release": "^15.13.18",
-        "@hexonet/semantic-release-github-whmcsbase-congig": "^1.0.0"
+        "@hexonet/semantic-release-github-whmcsbase-config": "^1.0.0"
     },
     "scripts": {
         "codeCheck": "phpcs --ignore=\"*/vendor/*\" --standard=PSR2 -q -n --colors ispapi_modules.php",
