@@ -1,3 +1,11 @@
+## [1.2.1](https://github.com/hexonet/whmcs-ispapi-widget-modules/compare/v1.2.0...v1.2.1) (2019-09-18)
+
+
+### Bug Fixes
+
+* **release process:** fixed typo in node package name ([85bf8d3](https://github.com/hexonet/whmcs-ispapi-widget-modules/commit/85bf8d3))
+* **release process:** review from scratch ([3e2b918](https://github.com/hexonet/whmcs-ispapi-widget-modules/commit/3e2b918))
+
 # [1.2.0](https://github.com/hexonet/whmcs-ispapi-widget-modules/compare/v1.1.2...v1.2.0) (2019-09-03)
 
 
