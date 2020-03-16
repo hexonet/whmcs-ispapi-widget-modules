@@ -1,5 +1,5 @@
 <?php
-namespace ISPAPI;
+namespace WHMCS\Module\Widget;
 
 /**
  * WHMCS ISPAPI Modules Dashboard Widget
@@ -119,7 +119,7 @@ EOF;
             case "widgets":
                 $whmcslist->load($whmcsmoduleid);
                 $tmp = explode("_", $whmcsmoduleid);
-                $widgetClass = "\\ISPAPI\\" . ucfirst($tmp[0]) . ucfirst($tmp[1]) . "Widget";
+                $widgetClass = "\\WHMCS\Module\Widget\\" . ucfirst($tmp[0]) . ucfirst($tmp[1]) . "Widget";
                 $mname=$tmp[0]."widget".$tmp[1];
                 if (class_exists($widgetClass) && defined("$widgetClass::VERSION")) {
                     $v = $widgetClass::VERSION;
