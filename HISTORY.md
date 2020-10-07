@@ -1,3 +1,10 @@
+# [2.1.0](https://github.com/hexonet/whmcs-ispapi-widget-modules/compare/v2.0.0...v2.1.0) (2020-10-07)
+
+
+### Features
+
+* **monitoringwidget:** added ([65daa5d](https://github.com/hexonet/whmcs-ispapi-widget-modules/commit/65daa5d7691fd9654279af1c82f71e052db028ca))
+
 # [2.0.0](https://github.com/hexonet/whmcs-ispapi-widget-modules/compare/v1.2.2...v2.0.0) (2020-04-27)
 
 
