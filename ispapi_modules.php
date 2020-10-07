@@ -81,6 +81,11 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         "ispapiwidgetmodules" => [
             "id" => "whmcs-ispapi-widget-modules",
             "status" => true,
+            "prio" => 0
+        ],
+        "ispapiwidgetmonitoring" => [
+            "id" => "whmcs-ispapi-widget-monitoring",
+            "status" => true,
             "prio" => 1
         ]
     ];
