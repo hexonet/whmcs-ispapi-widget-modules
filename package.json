@@ -9,7 +9,8 @@
     },
     "license": "MIT",
     "engines": {
-        "node": ">=10.18.0"
+        "node": ">=10.18.0",
+        "npm": ">=6.13.4"
     },
     "homepage": "https://github.com/hexonet/whmcs-ispapi-widget-modules",
     "repository": "github:hexonet/whmcs-ispapi-widget-modules",
@@ -18,10 +19,6 @@
         {
             "name": "Kai Schwarz",
             "url": "https://github.com/papakai"
-        },
-        {
-            "name": "Tulasi Seelamkurthi",
-            "url": "https://github.com/tulsi91"
         }
     ],
     "keywords": [
@@ -44,13 +41,17 @@
         "application"
     ],
     "devDependencies": {
-        "npm": ">=6.13.4",
         "semantic-release": "^17.0.3",
-        "@hexonet/semantic-release-github-whmcsbase-config": "^1.0.0"
+        "@hexonet/semantic-release-github-whmcsbase-config": "^2.0.1",
+        "gulp": "^4.0.2",
+        "gulp-clean": "^0.4.0",
+        "gulp-tar": "^3.1.0",
+        "gulp-gzip": "^1.4.2",
+        "gulp-zip": "^5.0.2"
     },
     "scripts": {
         "phpCompatibility": "./scripts/phpcompatibility.sh",
-        "codeCheck": "phpcs --standard=PSR1,PSR2 -q -n --colors ispapi_modules.php",
-        "codeFix": "phpcbf --standard=PSR1,PSR2 -q ispapi_modules.php"
+        "codeCheck": "phpcs --standard=PSR12 -s -q -n --colors ispapi_modules.php",
+        "codeFix": "phpcbf --standard=PSR12 -s -q ispapi_modules.php"
     }
 }

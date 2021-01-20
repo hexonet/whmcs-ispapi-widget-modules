@@ -1,7 +1,4 @@
 <?php
-namespace WHMCS\Module\Widget;
-
-use WHMCS\Module\Registrar\Ispapi\Ispapi;
 
 /**
  * WHMCS ISPAPI Modules Dashboard Widget
@@ -13,6 +10,10 @@ use WHMCS\Module\Registrar\Ispapi\Ispapi;
  * @copyright Copyright (c) Kai Schwarz, HEXONET GmbH, 2019
  * @license https://github.com/hexonet/whmcs-ispapi-widget-modules/blob/master/LICENSE/ MIT License
  */
+
+namespace WHMCS\Module\Widget;
+
+use WHMCS\Module\Registrar\Ispapi\Ispapi;
 
 add_hook('AdminHomeWidgets', 1, function () {
     return new IspapiModulesWidget();
@@ -162,7 +163,7 @@ EOF;
             if (!file_exists($logopath)) {
                 $logopath = "https://raw.githubusercontent.com/hexonet/" . $moduleid . "/master/module.png";
             } else {
-                $logopath = \DI::make("asset")->getWebRoot() . "/modules/" . $moduletype . "/" . $whmcsmoduleid ."/module.png";
+                $logopath = \DI::make("asset")->getWebRoot() . "/modules/" . $moduletype . "/" . $whmcsmoduleid . "/module.png";
             }
             $d = json_decode($d, true);//404 could happen and will be returned as string
             if ($d !== null) {
@@ -194,7 +195,7 @@ EOF;
                             '<img style="width:120px; height: 120px" src="' . $module["urls"]["logo"] . '" alt="' .  $module["id"] . '"/>';
             if ($module["deprecated"]) {
                 $html .= '<div class="textred">DEPRECATED</div>';
-            } elseif ($module["version_used"]==="n/a") {
+            } elseif ($module["version_used"] === "n/a") {
                 $html .= '<div class="textred">NOT INSTALLED</div>';
             } else {
                 $html .= (
@@ -224,7 +225,7 @@ EOF;
     {
         global $CONFIG;
         $modules = [];
-        
+
         // get registrar module versions
         $registrar = new \WHMCS\Module\Registrar();
         foreach ($registrar->getList() as $module) {

@@ -41,9 +41,7 @@ Please read [our development guide](https://github.com/hexonet/whmcs-ispapi-widg
 
 ## Authors ##
 
-* **Anthony Schneider** - *development* - [AnthonySchn](https://github.com/anthonyschn)
 * **Kai Schwarz** - *development* - [PapaKai](https://github.com/papakai)
-* **Tulasi Seelamkurthi** - *development* - [Tulsi91](https://github.com/tulsi91)
 
 See also the list of [contributors](https://github.com/hexonet/whmcs-ispapi-widget-modules/graphs/contributors) who participated in this project.
 
