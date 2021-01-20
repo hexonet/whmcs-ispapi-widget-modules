@@ -1,3 +1,10 @@
+## [2.1.1](https://github.com/hexonet/whmcs-ispapi-widget-modules/compare/v2.1.0...v2.1.1) (2021-01-20)
+
+
+### Bug Fixes
+
+* **ci:** migration from Travis CI to github actions ([7ce4f48](https://github.com/hexonet/whmcs-ispapi-widget-modules/commit/7ce4f480c921d28be0756a04bbff6cadf54a7cfc))
+
 # [2.1.0](https://github.com/hexonet/whmcs-ispapi-widget-modules/compare/v2.0.0...v2.1.0) (2020-10-07)
 
 
