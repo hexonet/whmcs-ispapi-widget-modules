@@ -17,7 +17,10 @@ on:
 jobs:
   test:
     name: Test @ PHP ${{ matrix.php-version }} - x86 - ubuntu-latest
+<<<<<<< HEAD:.github/workflows/whmcs.yml
     if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.actor != 'dependabot[bot]')
+=======
+>>>>>>> 12edf4b (ci(gh-template): shared template):.github/workflows/release.yml
     strategy:
       matrix:
         php-version:
