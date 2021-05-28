@@ -242,53 +242,42 @@ EOF;
             <a style="margin: 3px;" href="$download_link" target="_blank" class="label label-success" data-toggle="tooltip" data-placement="top" title="Download update"><i class="fas fa-sync"></i></a>
             EOF;
 
-        $installed_buttons = '<div class="" style="margin-top: 8px">';
         $installed_buttons .= $documentation_button;
         $installed_buttons .= ($module["module_type"] != 'widgets') ? $deactivate_button : '';
 
-        $deprecated_buttons = ' 
-            <div class="" style="margin-top: 8px">
-                <a style="margin: 3px;" href="/admin/configaddonmods.php" target="_blank" class="label label-danger" data-toggle="tooltip" data-placement="top" title="Uninstall"><i class="fas fa-trash"></i></a>
-            </div>';
+        $deprecated_buttons = '<a style="margin: 3px;" href="/admin/configaddonmods.php" target="_blank" class="label label-danger" data-toggle="tooltip" data-placement="top" title="Uninstall"><i class="fas fa-trash"></i></a>';
         $not_installed_buttons = <<<EOF
-             <div class="" style="margin-top: 8px">
                 <a style="margin: 3px;" href="$documentation_link" target="_blank" class="label label-default" data-toggle="tooltip" data-placement="top" title="See documentation"><i class="fas fa-book"></i></a>
                 <a style="margin: 3px;" href="$download_link" target="_blank" class="label label-success" data-toggle="tooltip" data-placement="top" title="Download"><i class="fas fa-arrow-down"></i></a>
-            </div>
             EOF;
         if ($module) {
             // style="overflow: auto; white-space: nowrap;"
-            $html = '<div class="col-sm-4 text-center small" style="overflow: auto; white-space: nowrap;">' .
-                        '<div class="" style="min-height: 80px;border-radius: 4px; margin-top:10px; border: solid;border-width: thin;border-color: #e6e6e6;padding: 3px;">' .
-                            '<span class="small">' .  $module["name"] . '</span> <hr style="margin-top:0px; margin-bottom:0px;">';
+            $tr = '<tr><td>' . $module["name"] . '</td>';
             if ($module["deprecated"]) {
-                $html .= '<div class="textred small">Deprecated</div>';
-                $html .= $deprecated_buttons;
+                $tr .= '<td class="textred small">Deprecated</td>';
+                $tr .= '<td>' . $deprecated_buttons . '</td>';
             } elseif ($module["version_used"] === "0.0.0") {
                 if ($module["active"]) {
-                    $html .= '<div class="textred small">Not Installed</div>';
-                    $html .= $not_installed_buttons;
+                    $tr .= '<td class="textred small">Not Installed</td>';
+                    $tr .= '<td>' . $not_installed_buttons . '</td>';
                 } else {
-                    $html .= '<div class="textred small">Not Acitve</div>';
-                    $html .= <<<EOF
-                            <div class="" style="margin-top: 8px">
-                                $activate_button
-                            </div>
-                            EOF;
+                    $tr .= '<td class="textred small">Not Acitve</td>';
+                    $tr .= '<td> ' . $activate_button . '</td>';
                 }
             } else {
                 if (version_compare($module["version_used"], $module["version_latest"]) < 0) {
-                    $html .= '<div><a class="textred small" href="' . $module["urls"]["download"] . '">v' . $module["version_used"] . '</a></div>';
+                    $tr .= '<td><a class="textred small" href="' . $download_link . '">v' . $module["version_used"] . '</a></td>';
                     $installed_buttons .= $update_button;
                 } else {
-                    $html .= '<div class="textgreen small">v' . $module["version_used"] . '</div>';
+                    $tr .= '<td class="textgreen small">v' . $module["version_used"] . '</td>';
                 }
                 // $installed_buttons .= '</div>' // close the buttons tag
-                $html .= $installed_buttons . '</div>';
+                $installed_buttons .= '</div>';
+                $tr .= '<td>'. $installed_buttons .'</td>';
             }
-            return $html . '</div></div>';
+            return $tr . '</tr>';
         }
-        return '<div class="col-sm-4"></div>';
+        return '<tr></tr>';
     }
 
     private function orderByPriority($a, $b)
@@ -312,10 +301,19 @@ EOF;
 
         usort($modules, [$this, "orderByPriority"]);
 
-        $content = '<div class="widget-content-padded" style="max-height: 450px">';
-        $installed = '<div class="row">';
-        $deprecated = '<div class="row">';
-        $not_installed = '<div class="row">';
+        $content = '<div class="widget-content-padded" style="max-height: 450px"><div class="row small">';
+        $table_start ='<table class="table table-bordered table-condensed">
+                        <thead>
+                            <tr>
+                            <th scope="col">Widget</th>
+                            <th scope="col">Version</th>
+                            <th scope="col">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>';
+        $installed .= $table_start;
+        $deprecated .= $table_start;
+        $not_installed .= $table_start;
         while (!empty($modules)) {
             $module = array_shift($modules);
             if ($module["deprecated"]) {
@@ -326,15 +324,16 @@ EOF;
                 $installed .= $this->getModuleHTML($module);
             }
         }
-        $installed .= '</div>';
-        $deprecated .= '</div>';
-        $not_installed .= '</div>';
+        $table .= '</tbody></table>';
+        $installed .= $table;
+        $deprecated .= $table;
+        $not_installed .= $table;
         $content .= '<ul class="nav nav-tabs">
-                    <li class="active small"><a data-toggle="tab" href="#tab1">Installed</a></li>
-                    <li class="small"><a data-toggle="tab" href="#tab2">Not Installed/Activated</a></li>
-                    <li class="small"><a data-toggle="tab" href="#tab3">Deprecated</a></li>
+                    <li class="active"><a data-toggle="tab" href="#tab1">Installed</a></li>
+                    <li class=""><a data-toggle="tab" href="#tab2">Not Installed/Activated</a></li>
+                    <li class=""><a data-toggle="tab" href="#tab3">Deprecated</a></li>
                 </ul>
-                <div class="tab-content">
+                <div class="tab-content small">
                     <div id="tab1" class="tab-pane fade in active">
                         ' . $installed . '
                     </div>
@@ -346,7 +345,7 @@ EOF;
                     </div>
                 </div>';
         // $content .= $installed . $deprecated . $not_installed;
-        $content .= '</div>';
+        $content .= '</div></div>';
 
         return $content;
     }
