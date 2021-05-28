@@ -273,7 +273,7 @@ EOF;
                 }
                 // $installed_buttons .= '</div>' // close the buttons tag
                 $installed_buttons .= '</div>';
-                $tr .= '<td>'. $installed_buttons .'</td>';
+                $tr .= '<td>' . $installed_buttons . '</td>';
             }
             return $tr . '</tr>';
         }
@@ -302,7 +302,7 @@ EOF;
         usort($modules, [$this, "orderByPriority"]);
 
         $content = '<div class="widget-content-padded" style="max-height: 450px"><div class="row small">';
-        $table_start ='<table class="table table-bordered table-condensed">
+        $table_start = '<table class="table table-bordered table-condensed">
                         <thead>
                             <tr>
                             <th scope="col">Widget</th>
