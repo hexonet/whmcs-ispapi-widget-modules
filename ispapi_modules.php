@@ -327,15 +327,14 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                 if (gettype($module["deprecated"]) == "boolean" && $module["deprecated"] === true) {
                     $data['case'] = 'default';
                     $deprecated[] = $data;
-                }
-                elseif (gettype($module["deprecated"]) == "array"){
+                } elseif (gettype($module["deprecated"]) == "array") {
                     // prepare data
                     $notice = $module["deprecated"]["notice"];
                     $url = $module["deprecated"]["url"];
                     $replacement = $module["deprecated"]["replacement"];
                     $case = $module["deprecated"]["case"];
                     // case 1: Product Deprecation.
-                    if($case == 'product'){
+                    if ($case == 'product') {
                         $data['case'] = $case;
                         $data['notice'] = $notice;
                         $data['url'] = $url;
@@ -343,7 +342,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                         $deprecated[] = $data;
                     }
                     // case 2: Deprecation since WHMCS vX.Y.Z
-                    if($case == 'whmcs'){
+                    if ($case == 'whmcs') {
                         $data['case'] = $case;
                         $data['whmcs_version'] = $module["deprecated"]["whmcs"];
                         $data['notice'] = $notice;
@@ -351,13 +350,11 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                         $data['replacement'] = $replacement;
                         $deprecated[] = $data;
                     }
-                } 
-                elseif (!$module["active"] || ($module["version_used"] === "0.0.0")) {
+                } elseif (!$module["active"] || ($module["version_used"] === "0.0.0")) {
                     // not active
                     // not installed
                     $not_active_or_installed[] = $data;
-                } 
-                else {
+                } else {
                     // active
                     $installed[] = $data;
                 }
