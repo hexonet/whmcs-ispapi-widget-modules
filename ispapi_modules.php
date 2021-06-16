@@ -62,8 +62,28 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "name" => "Domain Checker",
             "type" => "addon",
             "class" => "",
-            "deprecated" => false,
+            "deprecated" => [
+                "notice" => "Module is no longer maintained as of the new \"Registrar TLD Sync Feature\" Feature of WHMCS. ",
+                "url" => "https://docs.whmcs.com/Registrar_TLD_Sync",
+                "case" => "whmcs",
+                "whmcs" => "7.10",
+                "replacement" => "whmcs-ispapi-registrar"
+                ],
             "prio" => 9
+        ],
+        "ispapidpi" => [
+            "id" => "whmcs-ispapi-pricingimporter",
+            "name" => "Price Importer",
+            "type" => "addon",
+            "class" => "",
+            "deprecated" => [
+                "case" => "product", # case of product deprecation
+                "notice" => "Product stopped on 1st of April 2021. You can still manage your existing Premium DNS Zones and their Resource Records. Ordering new ones will fail.",
+                "url" => "https://www.hexonet.net/blog/dns-to-serve-you-better",
+                "replacement" => "whmcs-dns"
+            ],
+            "replacedby" => "ispapiimporter",
+            "prio" => 5
         ],
         "ispapi" => [
             "id" => "whmcs-ispapi-registrar",
@@ -73,21 +93,12 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "deprecated" => false,
             "prio" => 10
         ],
-        "ispapidpi" => [
-            "id" => "whmcs-ispapi-pricingimporter",
-            "name" => "Price Importer",
-            "type" => "addon",
-            "class" => "",
-            "deprecated" => true,
-            "replacedby" => "ispapiimporter",
-            "prio" => 5
-        ],
         "ispapidomainimport" => [
             "id" => "whmcs-ispapi-domainimport",
             "name" => "Domain Importer",
             "type" => "addon",
             "class" => "",
-            "deprecated" => false,
+            "deprecated" => true,
             "replacedby" => "ispapiimporter",
             "prio" => 4
         ],
@@ -137,7 +148,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                 <div class="widget-content-padded widget-billing">
                     <div class="color-pink">$errMsg</div>
                 </div>
-EOF;
+                EOF;
     }
 
     /**
@@ -313,13 +324,40 @@ EOF;
                 $data['download_link'] = $module["urls"]["download"];
                 $data['active'] = $module['active'];
                 // check module type
-                if ($module["deprecated"]) {
+                if (gettype($module["deprecated"]) == "boolean" && $module["deprecated"] === true) {
+                    $data['case'] = 'default';
                     $deprecated[] = $data;
-                } elseif (!$module["active"] || ($module["version_used"] === "0.0.0")) {
+                }
+                elseif (gettype($module["deprecated"]) == "array"){
+                    // prepare data
+                    $notice = $module["deprecated"]["notice"];
+                    $url = $module["deprecated"]["url"];
+                    $replacement = $module["deprecated"]["replacement"];
+                    $case = $module["deprecated"]["case"];
+                    // case 1: Product Deprecation.
+                    if($case == 'product'){
+                        $data['case'] = $case;
+                        $data['notice'] = $notice;
+                        $data['url'] = $url;
+                        $data['replacement'] = $replacement;
+                        $deprecated[] = $data;
+                    }
+                    // case 2: Deprecation since WHMCS vX.Y.Z
+                    if($case == 'whmcs'){
+                        $data['case'] = $case;
+                        $data['whmcs_version'] = $module["deprecated"]["whmcs"];
+                        $data['notice'] = $notice;
+                        $data['url'] = $url;
+                        $data['replacement'] = $replacement;
+                        $deprecated[] = $data;
+                    }
+                } 
+                elseif (!$module["active"] || ($module["version_used"] === "0.0.0")) {
                     // not active
                     // not installed
                     $not_active_or_installed[] = $data;
-                } else {
+                } 
+                else {
                     // active
                     $installed[] = $data;
                 }
@@ -453,11 +491,36 @@ EOF;
                                                     <td>{$module.type}</td>
                                                     <td><span class="textred small">Deprecated</span></td>
                                                     <td>
-                                                        <button class="btn btn-danger btn-xs" disabled onclick="window.open(\'/admin/configaddonmods.php\');" data-toggle="tooltip" data-placement="top" title="Uninstall">
+                                                        <button class="btn btn-danger btn-xs" onclick="window.open(\'/admin/configaddonmods.php\');" data-toggle="tooltip" data-placement="top" title="Uninstall">
                                                             <i class="fas fa-trash"></i>
                                                         </button>
+                                                        {if $module.case != \'default\'}
+                                                            <button class="btn btn-warning btn-xs toggleDetailsView" m-type = "{$module.whmcsmoduleid}-details" data-toggle="tooltip" data-placement="top" title="Show Details">
+                                                                <i class="fas fa-caret-down"></i>
+                                                            </button>
+                                                        {/if}
                                                     </td>
                                                 </tr>
+                                                {if $module.case != \'default\'}
+                                                    <tr>
+                                                        <td id="{$module.whmcsmoduleid}-details" class="bg-warning" colspan="4" style="display: none;">
+                                                            {if $module.case == \'product\'}
+                                                                {$module.notice}.
+                                                                Read more: <a href="{$module.url}" target=_blank>here.</a>
+                                                                {if $module.replacement}
+                                                                Replacement available: {$module.replacement}.
+                                                            {/if}
+                                                            {else} 
+                                                                Deprecated since WHMCS {$module.whmcs_version}. 
+                                                                {$module.notice}
+                                                                Read more: <a href="{$module.url}" target=_blank>here.</a>
+                                                                {if $module.replacement}
+                                                                    Replacement available: {$module.replacement}.
+                                                                {/if}
+                                                            {/if}
+                                                        </td>
+                                                    </tr>
+                                                {/if}
                                             {foreachelse}
                                                 <span class="text-center">No modules found.</span>
                                             {/foreach}
@@ -695,6 +758,15 @@ EOF;
                     alert(type + ' not supported');
                 }
             })
+            // toggle the details view
+            $('.toggleDetailsView').on('click', function (event) {
+                const module = $(this).attr("m-type");
+                $("#"+module).fadeToggle();
+                $(this).children('.fa-caret-up, .fa-caret-down').toggleClass("fa-caret-up fa-caret-down");
+            })
+            function toggleDetailsView() {
+                
+            }
         </script>
         EOF;
     }
