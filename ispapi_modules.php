@@ -388,7 +388,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         }
     }
 
-    function delTree($dir)
+    private function delTree($dir)
     {
         $files = array_diff(scandir($dir), array('.', '..'));
         foreach ($files as $file) {
