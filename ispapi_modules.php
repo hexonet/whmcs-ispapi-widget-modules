@@ -295,13 +295,23 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                 $dirs = $this->map[$module]['files'];
                 $result = [];
                 try {
+                    $dirs = $this->map[$module]['files'];
+                    $results = [];
                     foreach ($dirs as $dir) {
-                        $result[$dir] = $this->delTree($dir);
-                        $error = error_get_last();
+                        $results[$dir] = $this->delTree(ROOTDIR . $dir, []);
                     }
+                    // add the error
+                    // $results['error'] = error_get_last();
+                    // check if files were deleted
+                    // $success = false;
+                    // foreach ($results as $key => $value){
+                    //     foreach ($value as $sub_key => $sub_value){
+
+                    //     }
+                    // }
                     return [
                         "success" => true,
-                        "data" => $result
+                        "data" => $results
                     ];
                 } catch (Exception $e) {
                     return [
@@ -388,23 +398,22 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         }
     }
 
-    private function delTree($dir)
+    private function delTree($dir, $results)
     {
         $files = array_diff(scandir($dir), array('.', '..'));
         foreach ($files as $file) {
             $fullpath = $dir . DIRECTORY_SEPARATOR . $file;
             if (is_dir($fullpath)) {
-                var_dump($fullpath);
-                $this->delTree($fullpath);
+                // var_dump($fullpath);
+                $results = $this->delTree($fullpath, $results);
             } else {
-                var_dump($fullpath);
-                chmod($fullpath, 0777);
-                var_dump(unlink($fullpath));
-                var_dump(error_get_last());
+                $result = unlink($fullpath);
+                $results[$fullpath] = $result;
             }
         }
-
-        return rmdir($dir);
+        $dir_delete = rmdir($dir);
+        $results[$dir] = $dir_delete;
+        return $results;
     }
 
     /**
@@ -413,18 +422,15 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
      */
     public function getData()
     {
-        $dirs = $this->map['ispapidpi']['files'];
-        $result = [];
-        try {
-            foreach ($dirs as $dir) {
-                $this->delTree(ROOTDIR . $dir);
-                $result[$dir] = error_get_last();
-            }
-            var_dump($result);
-        } catch (Exception $e) {
-            var_dump($e);
-        }
-        die();
+        // $dirs = $this->map['ispapidpi']['files'];
+        // $results = [];
+        // foreach ($dirs as $dir) {
+        //     $results[$dir]= $this->delTree(ROOTDIR . $dir, []);
+        // }
+        // $results['error'] = error_get_last();
+        // var_dump($results);
+        // die();
+
         global $CONFIG;
         $modules = [];
         $installed_modules_ids = [];
@@ -804,8 +810,9 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                         if ( result ){
                             // remove from the system
                             removeModule(module).then(function(result){
-                                if (result){
+                                if (result.success){
                                     refreshWidget('IspapiModulesWidget', 'refresh=1');
+                                    return true;
                                 }
                                 else {
                                     alert("could not remove module: " + module);
@@ -820,12 +827,34 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                 else {
                     // remove from the system
                     removeModule(module).then(function(result){
-                        if (result){
-                            refreshWidget('IspapiModulesWidget', 'refresh=1');
+                        if (result.success){
+                            const data = JSON.parse(result.widgetOutput);
+                            if(data.success){
+                                var flag_failed = 'Success';
+                                var deleted_files= "";
+                                var failed_files= "";
+                                // console.log(data.data);
+                                for (const [key, value] of Object.entries(data.data)) {
+                                    for (const [subkey, subvalue] of Object.entries(value)) {
+                                        console.log(key, subvalue);
+                                        if (subvalue == true){
+                                            deleted_files += subkey + "\\n";
+                                        } else {
+                                            flag_failed = "Failure!";
+                                            failed_files += subkey + "\\n";
+                                        }
+                                    }
+                                }
+                                alert("Operation completed with " + flag_failed + " \\n files deleted:\\n " + deleted_files + "\\n files failed to delete: \\n " + failed_files);
+                            }
+                            else {
+                                alert("An error occured on server side: \\n\\n" + data.data);
+                            }
                         }
-                        else {
-                            alert("could not remove module: " + module);
+                        else{
+                            alert("Server error, check your internet connection.");
                         }
+                        refreshWidget('IspapiModulesWidget', 'refresh=1');
                     })
                 }
             });
@@ -833,7 +862,9 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                 const url = WHMCS.adminUtils.getAdminRouteUrl('/widget/refresh&widget=IspapiModulesWidget&module='+ module + '&action=removeModule');
                     const result = await $.ajax({
                         url: url,
-                        type: 'GET'
+                        type: 'GET',
+                        success: function (data) { return true;},
+                        error: function (jqXHR, textStatus, errorThrown) { return false; }
                     });
                     return result;
             }
