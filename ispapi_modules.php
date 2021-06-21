@@ -748,14 +748,14 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                                                                         {$module.notice}.
                                                                         Read more: <a href="{$module.url}" target=_blank>here.</a>
                                                                         {if $module.replacement}
-                                                                        Replacement available: {$module.replacement}.
+                                                                        Replacement available: {$module.name}.
                                                                     {/if}
                                                                     {else} 
                                                                         Deprecated since WHMCS {$module.whmcs_version}. 
                                                                         {$module.notice}
                                                                         Read more: <a href="{$module.url}" target=_blank>here.</a>
                                                                         {if $module.replacement}
-                                                                            Replacement available: {$module.replacement}.
+                                                                            Replacement available: {$module.name}.
                                                                         {/if}
                                                                     {/if}
                                                                 </td>
