@@ -296,16 +296,16 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                 $result = [];
                 try {
                     $dirs = $this->map[$module]['files'];
-                    if(!empty($dirs)){
+                    if (!empty($dirs)) {
                         $files = [];
                         $results = [];
                         // check if files are removable
                         foreach ($dirs as $dir) {
                             $files[$dir] = $this->checkDirAndFileRemovable(ROOTDIR . $dir, []);
                         }
-                        foreach ($files as $file){
-                            foreach($file as $key=>$value){
-                                if ($value == false){
+                        foreach ($files as $file) {
+                            foreach ($file as $key => $value) {
+                                if ($value == false) {
                                     return [
                                         "success" => false,
                                         "data" => $key . " Permission Denied"
@@ -315,14 +315,13 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                         }
                         // check if success
                         foreach ($dirs as $dir) {
-                            $results[$dir]= $this->delTree(ROOTDIR . $dir, []);
+                            $results[$dir] = $this->delTree(ROOTDIR . $dir, []);
                         }
                         return [
                             "success" => true,
                             "data" => $results
                         ];
-                    }
-                    else{
+                    } else {
                         return [
                             "success" => false,
                             "data" => "No files were found!"
@@ -420,7 +419,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             $fullpath = $dir . DIRECTORY_SEPARATOR . $file;
             if (is_dir($fullpath)) {
                 // var_dump($fullpath);
-                $results = $this->delTree($fullpath, $results); 
+                $results = $this->delTree($fullpath, $results);
             } else {
                 $result = unlink($fullpath);
                 $results[$fullpath] = $result;
@@ -428,9 +427,9 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         }
         $dir_delete = rmdir($dir);
         $results[$dir] = $dir_delete;
-        return $results; 
+        return $results;
     }
-    
+
     private function checkDirAndFileRemovable($dir, $results)
     {
         $files = array_diff(scandir($dir), array('.', '..'));
@@ -440,26 +439,20 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                 $results = $this->checkDirAndFileRemovable($fullpath, $results);
             } else {
                 // check if files are removable
-                if (is_writable(dirname($fullpath)))
-                {
+                if (is_writable(dirname($fullpath))) {
                     $results[$fullpath] = true;
-                }
-                else
-                {
+                } else {
                     $results[$fullpath] = false;
                 }
             }
         }
         // check if the directory is removable
-        if (is_writable(dirname($dir)))
-        {
+        if (is_writable(dirname($dir))) {
             $results[$dir] = true;
-        }
-        else
-        {
+        } else {
             $results[$dir] = false;
         }
-        return $results; 
+        return $results;
     }
 
     /**
