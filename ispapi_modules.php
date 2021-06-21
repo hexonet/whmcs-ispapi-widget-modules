@@ -296,23 +296,38 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                 $result = [];
                 try {
                     $dirs = $this->map[$module]['files'];
-                    $results = [];
-                    foreach ($dirs as $dir) {
-                        $results[$dir] = $this->delTree(ROOTDIR . $dir, []);
+                    if(!empty($dirs)){
+                        $files = [];
+                        $results = [];
+                        // check if files are removable
+                        foreach ($dirs as $dir) {
+                            $files[$dir] = $this->checkDirAndFileRemovable(ROOTDIR . $dir, []);
+                        }
+                        foreach ($files as $file){
+                            foreach($file as $key=>$value){
+                                if ($value == false){
+                                    return [
+                                        "success" => false,
+                                        "data" => $key . " Permission Denied"
+                                    ];
+                                }
+                            }
+                        }
+                        // check if success
+                        foreach ($dirs as $dir) {
+                            $results[$dir]= $this->delTree(ROOTDIR . $dir, []);
+                        }
+                        return [
+                            "success" => true,
+                            "data" => $results
+                        ];
                     }
-                    // add the error
-                    // $results['error'] = error_get_last();
-                    // check if files were deleted
-                    // $success = false;
-                    // foreach ($results as $key => $value){
-                    //     foreach ($value as $sub_key => $sub_value){
-
-                    //     }
-                    // }
-                    return [
-                        "success" => true,
-                        "data" => $results
-                    ];
+                    else{
+                        return [
+                            "success" => false,
+                            "data" => "No files were found!"
+                        ];
+                    }
                 } catch (Exception $e) {
                     return [
                         "success" => false,
@@ -405,7 +420,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             $fullpath = $dir . DIRECTORY_SEPARATOR . $file;
             if (is_dir($fullpath)) {
                 // var_dump($fullpath);
-                $results = $this->delTree($fullpath, $results);
+                $results = $this->delTree($fullpath, $results); 
             } else {
                 $result = unlink($fullpath);
                 $results[$fullpath] = $result;
@@ -413,7 +428,38 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         }
         $dir_delete = rmdir($dir);
         $results[$dir] = $dir_delete;
-        return $results;
+        return $results; 
+    }
+    
+    private function checkDirAndFileRemovable($dir, $results)
+    {
+        $files = array_diff(scandir($dir), array('.', '..'));
+        foreach ($files as $file) {
+            $fullpath = $dir . DIRECTORY_SEPARATOR . $file;
+            if (is_dir($fullpath)) {
+                $results = $this->checkDirAndFileRemovable($fullpath, $results);
+            } else {
+                // check if files are removable
+                if (is_writable(dirname($fullpath)))
+                {
+                    $results[$fullpath] = true;
+                }
+                else
+                {
+                    $results[$fullpath] = false;
+                }
+            }
+        }
+        // check if the directory is removable
+        if (is_writable(dirname($dir)))
+        {
+            $results[$dir] = true;
+        }
+        else
+        {
+            $results[$dir] = false;
+        }
+        return $results; 
     }
 
     /**
@@ -575,7 +621,6 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                                             <thead>
                                                 <tr>
                                                 <th scope="col">Name</th>
-                                                <th scope="co">Type</th>
                                                 <th scope="col">Version</th>
                                                 <th scope="col">Actions</th>
                                                 </tr>
@@ -583,8 +628,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                                             <tbody>
                                                 {foreach $installed as $module}
                                                     <tr>
-                                                        <td>{$module.name}</td>
-                                                        <td>{$module.type}</td>
+                                                        <td>{$module.name} - {$module.type}</td>
                                                         <td>
                                                             {if $module.no_latest_used}
                                                                 <a class="textred small" href="{$module.download_link}">v{$module.version_used}</a>
@@ -623,7 +667,6 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                                             <thead>
                                                 <tr>
                                                 <th scope="col">Name</th>
-                                                <th scope="co">Type</th>
                                                 <th scope="col">Status</th>
                                                 <th scope="col">Actions</th>
                                                 </tr>
@@ -631,8 +674,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                                             <tbody>
                                                 {foreach $not_active_or_installed as $module}
                                                     <tr>
-                                                    <td>{$module.name}</td>
-                                                    <td>{$module.type}</td>    
+                                                    <td>{$module.name} - {$module.type}</td>
                                                         {if $module.status == \'not-active\'}
                                                             <td class="textred small">Not Acitve</td>
                                                             <td>
@@ -672,60 +714,60 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                                             <thead>
                                                 <tr>
                                                 <th scope="col">Name</th>
-                                                <th scope="co">Type</th>
                                                 <th scope="col">Status</th>
                                                 <th scope="col">Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {foreach $deprecated as $module}
-                                                    <tr>
-                                                        <td>{$module.name}</td>
-                                                        <td>{$module.type}</td>
-                                                        <td>
-                                                            {if $module.status == \'active\'}
-                                                                <span class="textorange small">Activated/ Installed/</span>
-                                                            {/if}
-                                                            {if $module.status == \'not-active\'}
-                                                                <span class="textorange small">Not Activated/</span>
-                                                            {/if}
-                                                            {if $module.status == \'not-installed\'}
-                                                                <span class="textorange small">Not Installed/</span>
-                                                            {/if}
-                                                            <span class="textred small">Deprecated</span>
-                                                        </td>
-                                                        <td>
-                                                            {if $module.status != \'not-installed\'}
-                                                                <button class="btn btn-danger btn-xs removebtn" m-status="{$module.status}" m-action="remove" m-type="{$module.type}" module="{$module.whmcsmoduleid}" token="{$module.token}" data-toggle="tooltip" data-placement="top" title="Remove">
-                                                                    <i class="fas fa-trash"></i>
-                                                                </button>
-                                                            {/if}
-                                                            {if $module.case != \'default\'}
-                                                                <button class="btn btn-warning btn-xs toggleDetailsView" m-type = "{$module.whmcsmoduleid}-details" data-toggle="tooltip" data-placement="top" title="Show Details">
-                                                                    <i class="fas fa-caret-down"></i>
-                                                                </button>
-                                                            {/if}
-                                                        </td>
-                                                    </tr>
-                                                    {if $module.case != \'default\'}
+                                                    {if $module.status != \'not-installed\'}
                                                         <tr>
-                                                            <td id="{$module.whmcsmoduleid}-details" class="bg-warning" colspan="4" style="display: none;">
-                                                                {if $module.case == \'product\'}
-                                                                    {$module.notice}.
-                                                                    Read more: <a href="{$module.url}" target=_blank>here.</a>
-                                                                    {if $module.replacement}
-                                                                    Replacement available: {$module.replacement}.
+                                                            <td>{$module.name} - {$module.type}</td>
+                                                            <td>
+                                                                {if $module.status == \'active\'}
+                                                                    <span class="textorange small">Activated/ Installed/</span>
                                                                 {/if}
-                                                                {else} 
-                                                                    Deprecated since WHMCS {$module.whmcs_version}. 
-                                                                    {$module.notice}
-                                                                    Read more: <a href="{$module.url}" target=_blank>here.</a>
-                                                                    {if $module.replacement}
-                                                                        Replacement available: {$module.replacement}.
-                                                                    {/if}
+                                                                {if $module.status == \'not-active\'}
+                                                                    <span class="textorange small">Not Activated/</span>
+                                                                {/if}
+                                                                {if $module.status == \'not-installed\'}
+                                                                    <span class="textorange small">Not Installed/</span>
+                                                                {/if}
+                                                                <span class="textred small">Deprecated</span>
+                                                            </td>
+                                                            <td>
+                                                                {if $module.status != \'not-installed\'}
+                                                                    <button class="btn btn-danger btn-xs removebtn" m-status="{$module.status}" m-action="remove" m-type="{$module.type}" module="{$module.whmcsmoduleid}" token="{$module.token}" data-toggle="tooltip" data-placement="top" title="Remove">
+                                                                        <i class="fas fa-trash"></i>
+                                                                    </button>
+                                                                {/if}
+                                                                {if $module.case != \'default\'}
+                                                                    <button class="btn btn-warning btn-xs toggleDetailsView" m-type = "{$module.whmcsmoduleid}-details" data-toggle="tooltip" data-placement="top" title="Show Details">
+                                                                        <i class="fas fa-caret-down"></i>
+                                                                    </button>
                                                                 {/if}
                                                             </td>
                                                         </tr>
+                                                        {if $module.case != \'default\'}
+                                                            <tr>
+                                                                <td id="{$module.whmcsmoduleid}-details" class="bg-warning" colspan="4" style="display: none;">
+                                                                    {if $module.case == \'product\'}
+                                                                        {$module.notice}.
+                                                                        Read more: <a href="{$module.url}" target=_blank>here.</a>
+                                                                        {if $module.replacement}
+                                                                        Replacement available: {$module.replacement}.
+                                                                    {/if}
+                                                                    {else} 
+                                                                        Deprecated since WHMCS {$module.whmcs_version}. 
+                                                                        {$module.notice}
+                                                                        Read more: <a href="{$module.url}" target=_blank>here.</a>
+                                                                        {if $module.replacement}
+                                                                            Replacement available: {$module.replacement}.
+                                                                        {/if}
+                                                                    {/if}
+                                                                </td>
+                                                            </tr>
+                                                        {/if}
                                                     {/if}
                                                 {foreachelse}
                                                     <span class="text-center">No modules found.</span>
@@ -830,7 +872,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                         if (result.success){
                             const data = JSON.parse(result.widgetOutput);
                             if(data.success){
-                                var flag_failed = 'Success';
+                                var flag_failed = false;
                                 var deleted_files= "";
                                 var failed_files= "";
                                 // console.log(data.data);
@@ -840,12 +882,17 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                                         if (subvalue == true){
                                             deleted_files += subkey + "\\n";
                                         } else {
-                                            flag_failed = "Failure!";
+                                            flag_failed = true;
                                             failed_files += subkey + "\\n";
                                         }
                                     }
                                 }
-                                alert("Operation completed with " + flag_failed + " \\n files deleted:\\n " + deleted_files + "\\n files failed to delete: \\n " + failed_files);
+                                if(flag_failed){
+                                    alert("Operations failed with error: \\n files failed to delete: \\n " + failed_files);
+                                }
+                                else{
+                                    alert("Operation completed with Success!");
+                                }
                             }
                             else {
                                 alert("An error occured on server side: \\n\\n" + data.data);
