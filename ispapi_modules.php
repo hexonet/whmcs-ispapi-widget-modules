@@ -807,7 +807,11 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                             refreshWidget('IspapiModulesWidget', 'refresh=1');
                         }
                         else{
-                            alert('An error occured, couldn\'t activate module: ' + module);
+                            const msg = 'An error occured, couldn\'t activate module: ' + module;
+                            // Add response in Modal body
+                            $('.modal-body-alert').html(msg);
+                            // Display Modal
+                            $('#alertModalOther').modal('show');
                         }
                     });
                 }
@@ -817,13 +821,20 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                             refreshWidget('IspapiModulesWidget', 'refresh=1');
                         }
                         else{
-                            alert('An error occured, couldn\'t activate module: ' + module);
+                            const msg = 'An error occured, couldn\'t activate module: ' + module;
+                            // Add response in Modal body
+                            $('.modal-body-alert').html(msg);
+                            // Display Modal
+                            $('#alertModalOther').modal('show');
                         }
                     });
                 }
                 else{
-                    $(this).html(defaultIcon);
-                    alert(type + ' not supported');
+                    const msg = type + ' not supported';
+                    // Add response in Modal body
+                    $('.modal-body-alert').html(msg);
+                    // Display Modal
+                    $('#alertModalOther').modal('show');
                 }
             })
             // toggle the details view
@@ -854,12 +865,20 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                                     return true;
                                 }
                                 else {
-                                    alert("could not remove module: " + module);
+                                    const msg = "could not remove module: " + module;
+                                    // Add response in Modal body
+                                    $('.modal-body').html(msg);
+                                    // Display Modal
+                                    $('#alertModalOther').modal('show');
                                 }
                             })
                         }
                         else{
-                            alert('An error occured, couldn\'t activate module: ' + module);
+                            const msg = 'An error occured, couldn\'t activate module: ' + module;
+                            // Add response in Modal body
+                            $('.modal-body').html(msg);
+                            // Display Modal
+                            $('#alertModalOther').modal('show');
                         }
                     });
                 }
@@ -908,7 +927,11 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                             }
                         }
                         else{
-                            alert("Server error, check your internet connection.");
+                            const msg = "Server error, check your internet connection.";
+                            // Add response in Modal body
+                            $('.modal-body').html(msg);
+                            // Display Modal
+                            $('#alertModal').modal('show');
                         }
                         //refreshWidget('IspapiModulesWidget', 'refresh=1');
                     })
@@ -961,7 +984,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
     private static function generateModals()
     {
         return <<<EOF
-            <!-- Modal -->
+            <!-- Modal for Deprecation alerts-->
             <div class="modal fade" id="alertModal" tabindex="-1" role="dialog" aria-labelledby="alertModalTitle" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered" role="document">
                     <div class="modal-content">
@@ -972,6 +995,25 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                         </button>
                     </div>
                     <div class="modal-body">
+                        ...
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" id="alertModalDismiss" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Modal for other alerts -->
+            <div class="modal fade" id="alertModalOther" tabindex="-1" role="dialog" aria-labelledby="alertModalTitle" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered" role="document">
+                    <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="alertModalTitle">Notification</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body-alert">
                         ...
                     </div>
                     <div class="modal-footer">
