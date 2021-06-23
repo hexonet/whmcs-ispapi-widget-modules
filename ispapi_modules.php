@@ -35,7 +35,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
     protected $map = [
         "ispapibackorder" => [
             "id" => "whmcs-ispapi-backorder",
-            "name" => "Backorder",
+            "name" => "Backorder Add-on",
             "type" => "addon", // type (registrar, addon)
             "deprecated" => false,
             "files" => [],
@@ -43,14 +43,19 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         ],
         "ispapipremiumdns" => [
             "id" => "whmcs-ispapi-premiumdns",
-            "name" => "Premium DNS",
+            "name" => "Premium DNS Server",
             "type" => "server",
-            "deprecated" => true,
+            "deprecated" => [
+                "case" => "product", # case of product deprecation
+                "notice" => "Product stopped on 1st of April 2021. You can still manage your existing Premium DNS Zones and their Resource Records. Ordering new ones will fail.",
+                "url" => "https://www.hexonet.net/blog/dns-to-serve-you-better",
+                "replacement" => "whmcs-dns"
+            ],
             "files" => [],
             "prio" => 6
         ],
         "ispapissl" => [
-            "id" => "whmcs-ispapi-ssl",
+            "id" => "whmcs-ispapi-ssl Add-on",
             "name" => "SSL",
             "type" => "addon",
             "deprecated" => true,
@@ -59,7 +64,15 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         ],
         "ispapidomaincheck" => [
             "id" => "whmcs-ispapi-domainchecker",
-            "name" => "Domain Checker",
+            "name" => "Domain Checker Add-on",
+            "type" => "addon",
+            "deprecated" => false,
+            "files" => [],
+            "prio" => 9
+        ],
+        "ispapidpi" => [
+            "id" => "whmcs-ispapi-pricingimporter",
+            "name" => "Price Importer Add-on",
             "type" => "addon",
             "deprecated" => [
                 "notice" => "Module is no longer maintained as of the new \"Registrar TLD Sync Feature\" Feature of WHMCS. ",
@@ -68,19 +81,6 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                 "whmcs" => "7.10",
                 "replacement" => "whmcs-ispapi-registrar"
                 ],
-            "files" => [],
-            "prio" => 9
-        ],
-        "ispapidpi" => [
-            "id" => "whmcs-ispapi-pricingimporter",
-            "name" => "Price Importer",
-            "type" => "addon",
-            "deprecated" => [
-                "case" => "product", # case of product deprecation
-                "notice" => "Product stopped on 1st of April 2021. You can still manage your existing Premium DNS Zones and their Resource Records. Ordering new ones will fail.",
-                "url" => "https://www.hexonet.net/blog/dns-to-serve-you-better",
-                "replacement" => "whmcs-dns"
-            ],
             "files" => [
                 "/modules/addons/ispapidpi"
             ],
@@ -89,7 +89,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         ],
         "ispapi" => [
             "id" => "whmcs-ispapi-registrar",
-            "name" => "Registrar",
+            "name" => "Registrar Module",
             "type" => "registrar",
             "deprecated" => false,
             "files" => [],
@@ -97,7 +97,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         ],
         "ispapidomainimport" => [
             "id" => "whmcs-ispapi-domainimport",
-            "name" => "Domain Importer",
+            "name" => "Domain Importer Add-on",
             "type" => "addon",
             "deprecated" => true,
             "files" => [],
@@ -105,7 +105,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         ],
         "ispapiimporter" => [
             "id" => "whmcs-ispapi-importer",
-            "name" => "ISPAPI Importer",
+            "name" => "ISPAPI Importer Add-on",
             "type" => "addon",
             "deprecated" => false,
             "files" => [],
@@ -190,7 +190,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
      * @param string $moduletype whmcs module type (registrars, addons, servers, widgets)
      * @return array|boolean
      */
-    private function getModuleData($whmcsmoduleid, $moduletype, $status)
+    private function getModuleData($whmcsmoduleid, $status)
     {
         $ghdata = $this->getGHModuleData($whmcsmoduleid);
         $moduleid = $ghdata["id"];
@@ -222,7 +222,6 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                     "id" => $moduleid,
                     "type" => $type,
                     "status" => $status,
-                    "module_type" => $moduletype,
                     "whmcsid" => $whmcsmoduleid,
                     "prio" => $priority,
                     "name" => $name,
@@ -346,13 +345,13 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
 
             usort($modules, [$this, "orderByPriority"]);
             // get modules by state
-            $installed = array();
-            $not_active_or_installed = array();
-            $deprecated = array();
+            $installed = [];
+            $not_active_or_installed = [];
+            $deprecated = [];
 
             while (!empty($modules)) {
                 $module = array_shift($modules);
-                $data = array();
+                $data = [];
                 $data['name'] = $module["name"];
                 $data['type'] = $module["type"];
                 $data['token'] = generate_token("link");
@@ -480,7 +479,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             if (preg_match("/^ispapi/i", $module)) {
                 $registrar->load($module);
                 if ($registrar->isActivated()) {
-                    $md = $this->getModuleData($module, "registrars", 'active');
+                    $md = $this->getModuleData($module, 'active');
                     if ($md !== false) {
                         $modules[] = $md;
                         $installed_modules_ids[] = $module;
@@ -494,7 +493,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         $addon = new \WHMCS\Module\Addon();
         foreach ($addon->getList() as $module) {
             if (in_array($module, $activemodules) && preg_match("/^ispapi/i", $module) && !preg_match("/\_addon$/i", $module)) {
-                $md = $this->getModuleData($module, "addons", 'active');
+                $md = $this->getModuleData($module, 'active');
                 if ($md !== false) {
                     $modules[] = $md;
                     $installed_modules_ids[] = $module;
@@ -506,7 +505,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         $server = new \WHMCS\Module\Server();
         foreach ($server->getList() as $module) {
             if (preg_match("/^ispapi/i", $module)) {
-                $md = $this->getModuleData($module, "servers", 'active');
+                $md = $this->getModuleData($module, 'active');
                 if ($md !== false) {
                     $modules[] = $md;
                     $installed_modules_ids[] = $module;
@@ -518,7 +517,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         $widget = new \WHMCS\Module\Widget();
         foreach ($widget->getList() as $module) {
             if (preg_match("/^ispapi/i", $module)) {
-                $md = $this->getModuleData(str_replace("_", "widget", $module), "widgets", 'active');
+                $md = $this->getModuleData(str_replace("_", "widget", $module), 'active');
                 if ($md !== false) {
                     $modules[] = $md;
                     $installed_modules_ids[] = str_replace("_", "widget", $module);
@@ -532,7 +531,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             // not activated modules
             if (!in_array($key, $installed_modules_ids) && in_array($key, $ourmodules)) {
                 $not_installed_modules[] = $key;
-                $md = $this->getModuleData($key, "NA", 'not-active');
+                $md = $this->getModuleData($key, 'not-active');
                 if ($md !== false) {
                     $modules[] = $md;
                 }
@@ -540,7 +539,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                 // not installed modules
                 // checked based on version number
                 $not_installed_modules[] = $key;
-                $md = $this->getModuleData($key, "NA", 'not-installed');
+                $md = $this->getModuleData($key, 'not-installed');
                 if ($md !== false) {
                     $modules[] = $md;
                 }
@@ -554,7 +553,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
     private function getModulesFiles()
     {
         // of type= registrar, addon, widget
-        $modules = array();
+        $modules = [];
         // addons
         if (is_dir(ROOTDIR . "/modules/addons/")) {
             $dh = opendir(ROOTDIR . "/modules/addons/");
@@ -599,6 +598,10 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         // get required js code
         $jscript = self::generateOutputJS();
         $smarty->assign('jscript', $jscript);
+        // get modals
+        $modals = self::generateModals();
+        $smarty->assign('modals', $modals);
+
         // parse content
         $content = '<div class="widget-content-padded" style="max-height: 450px">
                         <div class="row small">
@@ -613,15 +616,15 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                                         <table class="table table-bordered table-condensed" style="margin-top: 4px;">
                                             <thead>
                                                 <tr>
-                                                <th scope="col">Name</th>
-                                                <th scope="col">Version</th>
-                                                <th scope="col">Actions</th>
+                                                <th scope="col" style="width: 40%">Name</th>
+                                                <th scope="col" style="width: 30%">Version</th>
+                                                <th scope="col" style="width: 30%">Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {foreach $installed as $module}
                                                     <tr>
-                                                        <td>{$module.name} - {$module.type}</td>
+                                                        <td>{$module.name}</td>
                                                         <td>
                                                             {if $module.no_latest_used}
                                                                 <a class="textred small" href="{$module.download_link}">v{$module.version_used}</a>
@@ -659,15 +662,15 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                                         <table class="table table-bordered table-condensed" style="margin-top: 4px;">
                                             <thead>
                                                 <tr>
-                                                <th scope="col">Name</th>
-                                                <th scope="col">Status</th>
-                                                <th scope="col">Actions</th>
+                                                <th scope="col" style="width: 40%">Name</th>
+                                                <th scope="col" style="width: 30%">Status</th>
+                                                <th scope="col" style="width: 30%">Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {foreach $not_active_or_installed as $module}
                                                     <tr>
-                                                    <td>{$module.name} - {$module.type}</td>
+                                                    <td>{$module.name}</td>
                                                         {if $module.status == \'not-active\'}
                                                             <td class="textred small">Not Acitve</td>
                                                             <td>
@@ -706,16 +709,16 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                                         <table class="table table-bordered table-condensed" style="margin-top: 4px;">
                                             <thead>
                                                 <tr>
-                                                <th scope="col">Name</th>
-                                                <th scope="col">Status</th>
-                                                <th scope="col">Actions</th>
+                                                    <th scope="col" style="width: 40%">Name</th>
+                                                    <th scope="col" style="width: 30%">Status</th>
+                                                    <th scope="col" style="width: 30%">Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {foreach $deprecated as $module}
                                                     {if $module.status != \'not-installed\'}
                                                         <tr>
-                                                            <td>{$module.name} - {$module.type}</td>
+                                                            <td>{$module.name}</td>
                                                             <td>
                                                                 {if $module.status == \'active\'}
                                                                     <span class="textorange small">Activated/ Installed/</span>
@@ -748,14 +751,14 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                                                                         {$module.notice}.
                                                                         Read more: <a href="{$module.url}" target=_blank>here.</a>
                                                                         {if $module.replacement}
-                                                                        Replacement available: {$module.name}.
+                                                                        Replacement available: {$module.replacement}.
                                                                     {/if}
                                                                     {else} 
                                                                         Deprecated since WHMCS {$module.whmcs_version}. 
                                                                         {$module.notice}
                                                                         Read more: <a href="{$module.url}" target=_blank>here.</a>
                                                                         {if $module.replacement}
-                                                                            Replacement available: {$module.name}.
+                                                                            Replacement available: {$module.replacement}.
                                                                         {/if}
                                                                     {/if}
                                                                 </td>
@@ -777,6 +780,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                         </div>
                     </div>
                     {$jscript}
+                    {$modals}
                     ';
         return $smarty->fetch('eval:' . $content);
     }
@@ -881,23 +885,41 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                                     }
                                 }
                                 if(flag_failed){
-                                    alert("Operations failed with error: \\n files failed to delete: \\n " + failed_files);
+                                    const msg = "Operations failed with error: \\n files failed to delete: \\n " + failed_files;
+                                    // Add response in Modal body
+                                    $('.modal-body').html(msg);
+                                    // Display Modal
+                                    $('#alertModal').modal('show'); 
                                 }
                                 else{
-                                    alert("Operation completed with Success!");
+                                    const msg = "Operation completed with Success!";
+                                    // Add response in Modal body
+                                    $('.modal-body').html(msg);
+                                    // Display Modal
+                                    $('#alertModal').modal('show');
                                 }
                             }
                             else {
-                                alert("An error occured on server side: \\n\\n" + data.data);
+                                const msg = "An error occured on server side: \\n\\n" + data.data;
+                                // Add response in Modal body
+                                $('.modal-body').html(msg);
+                                // Display Modal
+                                $('#alertModal').modal('show');
                             }
                         }
                         else{
                             alert("Server error, check your internet connection.");
                         }
-                        refreshWidget('IspapiModulesWidget', 'refresh=1');
+                        //refreshWidget('IspapiModulesWidget', 'refresh=1');
                     })
                 }
             });
+            // $('#alertModal').on('hidden.bs.modal', function (event) {
+            //     refreshWidget('IspapiModulesWidget', 'refresh=1')
+            // });
+            $(document).on('hidden.bs.modal','#alertModal', function () {
+                refreshWidget('IspapiModulesWidget', 'refresh=1');
+            })
             async function removeModule(module){
                 const url = WHMCS.adminUtils.getAdminRouteUrl('/widget/refresh&widget=IspapiModulesWidget&module='+ module + '&action=removeModule');
                     const result = await $.ajax({
@@ -934,6 +956,30 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                 }
             }
         </script>
+        EOF;
+    }
+    private static function generateModals()
+    {
+        return <<<EOF
+            <!-- Modal -->
+            <div class="modal fade" id="alertModal" tabindex="-1" role="dialog" aria-labelledby="alertModalTitle" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered" role="document">
+                    <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="alertModalTitle">Notification</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        ...
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" id="alertModalDismiss" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    </div>
+                    </div>
+                </div>
+            </div>
         EOF;
     }
 }
