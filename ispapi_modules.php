@@ -39,6 +39,11 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "type" => "addon", // type (registrar, addon)
             "deprecated" => false,
             "files" => [],
+            "dependencies" => [
+                "required" => [
+                    "whmcs-ispapi-registrar"
+                ]
+            ],
             "prio" => 8
         ],
         "ispapipremiumdns" => [
@@ -51,6 +56,11 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                 "url" => "https://www.hexonet.net/blog/dns-to-serve-you-better",
                 "replacement" => "whmcs-dns"
             ],
+            "dependencies" => [
+                "required" => [
+                    "whmcs-ispapi-registrar"
+                ]
+            ],
             "files" => [],
             "prio" => 6
         ],
@@ -60,6 +70,11 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "type" => "addon",
             "deprecated" => true,
             "files" => [],
+            "dependencies" => [
+                "required" => [
+                    "whmcs-ispapi-registrar"
+                ]
+            ],
             "prio" => 7
         ],
         "ispapidomaincheck" => [
@@ -68,6 +83,11 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "type" => "addon",
             "deprecated" => false,
             "files" => [],
+            "dependencies" => [
+                "required" => [
+                    "whmcs-ispapi-registrar"
+                ]
+            ],
             "prio" => 9
         ],
         "ispapidpi" => [
@@ -84,6 +104,11 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "files" => [
                 "/modules/addons/ispapidpi"
             ],
+            "dependencies" => [
+                "required" => [
+                    "whmcs-ispapi-registrar"
+                ]
+            ],
             "replacedby" => "ispapiimporter",
             "prio" => 5
         ],
@@ -93,6 +118,9 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "type" => "registrar",
             "deprecated" => false,
             "files" => [],
+            "dependencies" => [
+                "required" => []
+            ],
             "prio" => 10
         ],
         "ispapidomainimport" => [
@@ -101,6 +129,11 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "type" => "addon",
             "deprecated" => true,
             "files" => [],
+            "dependencies" => [
+                "required" => [
+                    "whmcs-ispapi-registrar"
+                ]
+            ],
             "prio" => 4
         ],
         "ispapiimporter" => [
@@ -109,6 +142,11 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "type" => "addon",
             "deprecated" => false,
             "files" => [],
+            "dependencies" => [
+                "required" => [
+                    "whmcs-ispapi-registrar"
+                ]
+            ],
             "prio" => 3
         ],
         "ispapiwidgetaccount" => [
@@ -116,7 +154,12 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "name" => "Account Widget",
             "type" => "widget",
             "deprecated" => false,
-            "files" => [],
+            "files" => ['/modules/widgets/'],
+            "dependencies" => [
+                "required" => [
+                    "whmcs-ispapi-registrar"
+                ]
+            ],
             "prio" => 2
         ],
         "ispapiwidgetmodules" => [
@@ -124,7 +167,10 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "name" => "Modules Widget",
             "type" => "widget",
             "deprecated" => false,
-            "files" => [],
+            "files" => ['/modules/widgets/ispapi_modules.php'],
+            "dependencies" => [
+                "required" => []
+            ],
             "prio" => 0
         ],
         "ispapiwidgetmonitoring" => [
@@ -132,7 +178,12 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "name" => "Monitoring Widget",
             "type" => "widget",
             "deprecated" => false,
-            "files" => [],
+            "files" => ['/modules/widgets/ispapi_monitoring.php'],
+            "dependencies" => [
+                "required" => [
+                    "whmcs-ispapi-registrar"
+                ]
+            ],
             "prio" => 1
         ]
     ];
@@ -602,18 +653,25 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         $modals = self::generateModals();
         $smarty->assign('modals', $modals);
         // numner of not installed/activated
-        $no_items = '<span class="small" style="background: #ff6a6ad4; border-radius:50%; padding: 0px 5px 0px 5px;">
+        $installed_count = '<span class="small bg-success" style="border-radius:50%; padding: 0px 5px 0px 5px;">
+                        ' . sizeof($installed) . '
+                    </span>';
+        $not_installed_count = '<span class="small bg-danger" style="border-radius:50%; padding: 0px 5px 0px 5px;">
                         ' . sizeof($not_active_or_installed) . '
                     </span>';
-        $smarty->assign('no_items', $no_items);
-
+        $deprecated_count = '<span class="small bg-warning" style="border-radius:50%; padding: 0px 5px 0px 5px;">
+                        ' . sizeof($deprecated) . '
+                    </span>';
+        $smarty->assign('installed_count', $installed_count);
+        $smarty->assign('not_installed_count', $not_installed_count);
+        $smarty->assign('deprecated_count', $deprecated_count);
         // parse content
         $content = '<div class="widget-content-padded" style="max-height: 450px">
                         <div class="row small">
                             <ul class="nav nav-tabs">
-                                <li class="active"><a data-toggle="tab" href="#tab1">Installed</a></li>
-                                <li class=""><a data-toggle="tab" href="#tab2">Not Installed/Activated {$no_items}</a></li>
-                                <li class=""><a data-toggle="tab" href="#tab3">Deprecated</a></li>
+                                <li class="active"><a data-toggle="tab" href="#tab1">Installed {$installed_count}</a></li>
+                                <li class=""><a data-toggle="tab" href="#tab2">Not Installed/Activated {$not_installed_count}</a></li>
+                                <li class=""><a data-toggle="tab" href="#tab3">Deprecated {$deprecated_count}</a></li>
                             </ul>
                             <div class="tab-content small">
                                 <div id="tab1" class="tab-pane fade in active">
@@ -667,15 +725,19 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                                         <table class="table table-bordered table-condensed" style="margin-top: 4px;">
                                             <thead>
                                                 <tr>
-                                                <th scope="col" style="width: 40%">Name</th>
-                                                <th scope="col" style="width: 30%">Status</th>
-                                                <th scope="col" style="width: 30%">Actions</th>
+                                                    <th scope="col" style="width: 5%"><input type="checkbox" class="form-check-input" id="checkall"></th>
+                                                    <th scope="col" style="width: 40%">Name</th>
+                                                    <th scope="col" style="width: 30%">Status</th>
+                                                    <th scope="col" style="width: 25%">Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {foreach $not_active_or_installed as $module}
                                                     <tr>
-                                                    <td>{$module.name}</td>
+                                                        <td>
+                                                            <input type="checkbox" class="form-check-input" id="{$module.whmcsmoduleid}" {if $module.status != \'not-installed\'}disabled{/if}>
+                                                            </td>
+                                                        <td>{$module.name}</td>
                                                         {if $module.status == \'not-active\'}
                                                             <td class="textred small">Not Acitve</td>
                                                             <td>
