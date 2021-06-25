@@ -603,7 +603,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         $smarty->assign('modals', $modals);
         // numner of not installed/activated
         $no_items = '<span class="small" style="background: #ff6a6ad4; border-radius:50%; padding: 0px 5px 0px 5px;">
-                        '. sizeof($not_active_or_installed) .'
+                        ' . sizeof($not_active_or_installed) . '
                     </span>';
         $smarty->assign('no_items', $no_items);
 
