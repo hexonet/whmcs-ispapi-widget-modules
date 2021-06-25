@@ -601,13 +601,18 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         // get modals
         $modals = self::generateModals();
         $smarty->assign('modals', $modals);
+        // numner of not installed/activated
+        $no_items = '<span class="small" style="background: #ff6a6ad4; border-radius:50%; padding: 0px 5px 0px 5px;">
+                        '. sizeof($not_active_or_installed) .'
+                    </span>';
+        $smarty->assign('no_items', $no_items);
 
         // parse content
         $content = '<div class="widget-content-padded" style="max-height: 450px">
                         <div class="row small">
                             <ul class="nav nav-tabs">
                                 <li class="active"><a data-toggle="tab" href="#tab1">Installed</a></li>
-                                <li class=""><a data-toggle="tab" href="#tab2">Not Installed/Activated</a></li>
+                                <li class=""><a data-toggle="tab" href="#tab2">Not Installed/Activated {$no_items}</a></li>
                                 <li class=""><a data-toggle="tab" href="#tab3">Deprecated</a></li>
                             </ul>
                             <div class="tab-content small">
