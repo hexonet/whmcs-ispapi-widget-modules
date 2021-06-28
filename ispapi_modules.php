@@ -38,7 +38,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "name" => "Backorder Add-on",
             "type" => "addon", // type (registrar, addon)
             "deprecated" => false,
-            "files" => [],
+            "files" => ['/modules/addons/ispapibackorder'],
             "dependencies" => [
                 "required" => [
                     "whmcs-ispapi-registrar"
@@ -61,7 +61,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                     "whmcs-ispapi-registrar"
                 ]
             ],
-            "files" => [],
+            "files" => ['/modules/addons/ispapipremiumdns'],
             "prio" => 6
         ],
         "ispapissl" => [
@@ -69,7 +69,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "name" => "SSL",
             "type" => "addon",
             "deprecated" => true,
-            "files" => [],
+            "files" => ['/modules/addons/ispapissl_addon', '/servers/ispapissl'],
             "dependencies" => [
                 "required" => [
                     "whmcs-ispapi-registrar"
@@ -82,7 +82,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "name" => "Domain Checker Add-on",
             "type" => "addon",
             "deprecated" => false,
-            "files" => [],
+            "files" => ['/modules/addons/ispapidomaincheck'],
             "dependencies" => [
                 "required" => [
                     "whmcs-ispapi-registrar"
@@ -117,7 +117,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "name" => "Registrar Module",
             "type" => "registrar",
             "deprecated" => false,
-            "files" => [],
+            "files" => ['/modules/registrar/ispapi'],
             "dependencies" => [
                 "required" => []
             ],
@@ -128,7 +128,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "name" => "Domain Importer Add-on",
             "type" => "addon",
             "deprecated" => true,
-            "files" => [],
+            "files" => ['/modules/addons/ispapidomainimport'],
             "dependencies" => [
                 "required" => [
                     "whmcs-ispapi-registrar"
@@ -141,7 +141,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "name" => "ISPAPI Importer Add-on",
             "type" => "addon",
             "deprecated" => false,
-            "files" => [],
+            "files" => ['/modules/addons/ispapiimporter'],
             "dependencies" => [
                 "required" => [
                     "whmcs-ispapi-registrar"
@@ -154,7 +154,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "name" => "Account Widget",
             "type" => "widget",
             "deprecated" => false,
-            "files" => ['/modules/widgets/'],
+            "files" => ['/modules/widgets/ispapi_account.php'],
             "dependencies" => [
                 "required" => [
                     "whmcs-ispapi-registrar"
@@ -340,6 +340,12 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                     "type" => $type,
                     "module" => $module,
                     "result" => $results
+                ];
+            } elseif ($action == "installModule") {
+                return [
+                    "success" => true,
+                    "module" => $module,
+                    "result" => true
                 ];
             } elseif ($action == "removeModule") {
                 $dirs = $this->map[$module]['files'];
@@ -722,7 +728,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                                 </div>
                                 <div id="tab2" class="tab-pane fade">
                                     {if $not_active_or_installed}
-                                        <table class="table table-bordered table-condensed" style="margin-top: 4px;">
+                                        <table class="table table-bordered table-condensed" style="margin-top: 4px; margin-bottom: 10px">
                                             <thead>
                                                 <tr>
                                                     <th scope="col" style="width: 5%"><input type="checkbox" class="form-check-input" id="checkall"></th>
@@ -731,12 +737,14 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                                                     <th scope="col" style="width: 25%">Actions</th>
                                                 </tr>
                                             </thead>
-                                            <tbody>
+                                            <tbody id="notActiveOrInstalled">
                                                 {foreach $not_active_or_installed as $module}
                                                     <tr>
                                                         <td>
-                                                            <input type="checkbox" class="form-check-input" id="{$module.whmcsmoduleid}" {if $module.status != \'not-installed\'}disabled{/if}>
-                                                            </td>
+                                                            {if $module.status == \'not-installed\'}
+                                                                <input type="checkbox" class="module-checkbox" id="{$module.whmcsmoduleid}">
+                                                            {/if}
+                                                        </td>
                                                         <td>{$module.name}</td>
                                                         {if $module.status == \'not-active\'}
                                                             <td class="textred small">Not Acitve</td>
@@ -765,6 +773,15 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                                                 {/foreach}
                                             </tbody>
                                         </table>
+                                        <div class="row">
+                                            <div class="col-sm-12" style="display: inline-flex;">
+                                                <button disabled class="btn btn-success btn-sm" onclick="installModules();" id="btn-install">Install Selected <i class="fas fa-arrow-right"></i></button>
+                                                <div class="text-warning" id="installation-div" style="display:none ;padding: 7px 0px 0px 10px;font-size: 12px;">
+                                                    <i class="fas fa-spinner fa-spin"></i>
+                                                    <span id="installation-notice" >Please wait, Installing x </span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     {else}
                                         <div class="widget-content-padded">
                                             <div class="text-center">No modules found.</div>
@@ -857,11 +874,11 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         return <<<EOF
         <script type="text/javascript">
             const loadingIcon = '<i class="fas fa-spinner fa-spin"></i>';
-            const defaultIcon = $(this).html();
             // activate/deactivate logic
             $('.activatebtn, .deactivatebtn').on('click', function (event) {
                 // set loading icon
                 $(this).html(loadingIcon);
+                const defaultIcon = $(this).html();
                 // prepare data
                 const type = $(this).attr("m-type");
                 const module = $(this).attr("module");
@@ -910,7 +927,6 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                 $("#"+module).fadeToggle();
                 $(this).children('.fa-caret-up, .fa-caret-down').toggleClass("fa-caret-up fa-caret-down");
             });
-
             $('.removebtn').on('click', function (event) {
                 const loadingIcon = '<i class="fas fa-spinner fa-spin"></i>';
                 const defaultIcon = $(this).html();
@@ -1004,9 +1020,6 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                     })
                 }
             });
-            // $('#alertModal').on('hidden.bs.modal', function (event) {
-            //     refreshWidget('IspapiModulesWidget', 'refresh=1')
-            // });
             $(document).on('hidden.bs.modal','#alertModal', function () {
                 refreshWidget('IspapiModulesWidget', 'refresh=1');
             })
@@ -1044,6 +1057,58 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                 else{
                     return false;
                 }
+            }
+            $('#checkall:checkbox').change(function () {
+                if($(this).is(':checked')) {
+                    $('tbody#notActiveOrInstalled input:checkbox').each(function() {
+                        $(this).prop('checked', true);
+                    });
+                    // enable install button
+                    $('#btn-install').prop('disabled', false);
+                }
+                else{
+                    $('tbody#notActiveOrInstalled input:checkbox').each(function() {
+                        $(this).removeAttr('checked');
+                    });
+                    // disable install button
+                    $('#btn-install').prop('disabled', true);
+                }
+            });
+            $('.module-checkbox:checkbox').change(function () {
+                // TODO: check all checkbox
+                if($(this).is(':checked')){
+                    $('#btn-install').prop('disabled', false);
+                }
+                else{
+                    $('#btn-install').prop('disabled', true);
+                }
+            });
+            // install modules
+            async function installModules(){
+                let modules = [];
+                let checkboxs =  $('.module-checkbox:checkbox:checked');
+                for (const checkbox of checkboxs){
+                    let module = $(checkbox).attr('id');
+                    // show & update notification message
+                    $('#installation-div').slideDown(500);
+                    $('#installation-notice').html('Please wait, installing: ' + module);
+                    // send xhr request
+                    const url = WHMCS.adminUtils.getAdminRouteUrl('/widget/refresh&widget=IspapiModulesWidget&module='+ module + '&action=installModule');
+                    const result = await $.ajax({
+                        url: url,
+                        type: 'GET',
+                        success: function (data) { return true;},
+                        error: function (jqXHR, textStatus, errorThrown) { return false; }
+                    });
+                    // check results
+                    console.log(module, result);
+                    $('#installation-div').slideUp(100);
+                }
+                // alert message
+                const msg = "Modules were installed successfully!"
+                $('.modal-body').html(msg);
+                // Display Modal
+                $('#alertModal').modal('show');
             }
         </script>
         EOF;
