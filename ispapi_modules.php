@@ -14,6 +14,7 @@
 namespace WHMCS\Module\Widget;
 
 use App;
+use ZipArchive;
 use WHMCS\Module\Registrar\Ispapi\Ispapi;
 
 add_hook('AdminHomeWidgets', 1, function () {
@@ -65,11 +66,11 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "prio" => 6
         ],
         "ispapissl" => [
-            "id" => "whmcs-ispapi-ssl Add-on",
-            "name" => "SSL",
+            "id" => "whmcs-ispapi-ssl",
+            "name" => "SSL Add-on",
             "type" => "addon",
             "deprecated" => true,
-            "files" => ['/modules/addons/ispapissl_addon', '/servers/ispapissl'],
+            "files" => ['/addons/ispapissl_addon', '/servers/ispapissl'],
             "dependencies" => [
                 "required" => [
                     "whmcs-ispapi-registrar"
@@ -306,6 +307,9 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
      */
     public function generateOutput($modules)
     {
+        $this->downloadUnzipGetContents('ispapidomaincheck');
+        die();
+
         $action = App::getFromRequest('action');
         if ($action !== "") {
             //$setting = \WHMCS\Config\Setting::setValue("ispapiMonitoringWidget", $status);
@@ -348,7 +352,6 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                     "result" => true
                 ];
             } elseif ($action == "removeModule") {
-                $dirs = $this->map[$module]['files'];
                 $result = [];
                 try {
                     $dirs = $this->map[$module]['files'];
@@ -467,7 +470,61 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             return $content;
         }
     }
+    private function downloadUnzipGetContents($mapkey)
+    {
 
+        $moduleid = $this->map[$mapkey]['id'];
+        $dirs = $this->map[$mapkey]['files'];
+        $url = "https://github.com/hexonet/" . $moduleid . "/raw/master/" . $moduleid . "-latest.zip";
+        $zipfile = ROOTDIR . tempnam(sys_get_temp_dir(), 'zipfile') . $moduleid . "-latest.zip";
+        $zipdir = ROOTDIR . tempnam(sys_get_temp_dir(), 'zipdir');
+        // download data from url
+        $download = file_put_contents($zipfile, fopen($url, 'r'));
+        // extract zip file
+        $zip = new ZipArchive();
+        $res = $zip->open($zipfile);
+        $results = [];
+        if ($res === true) {
+            if ($zip->extractTo($zipdir)) {
+                foreach ($dirs as $dir) {
+                    // full path
+                    $sourceDir = $zipdir . $dir;
+                    $destinationDir = ROOTDIR . $dir;
+                    // check if destination dir exist
+                    var_dump($sourceDir);
+                    var_dump($destinationDir);
+                    if (is_dir($destinationDir)) {
+                        //check overwrite permission
+                    } else {
+                        // create the dir first
+                        mkdir($destinationDir, 0777);
+                        // call the copy function
+                    }
+                }
+            } else {
+            }
+           // close zip file
+            $zip->close();
+        } else {
+            echo 0;
+        //
+        }
+        // delete the dir
+        var_dump($this->delTree($zipdir, []));
+        var_dump(unlink($zipfile));
+    }
+    private function copyDirsAndFiles($dir, $results)
+    {
+        $files = array_diff(scandir($dir), array('.', '..'));
+        foreach ($files as $file) {
+            $fullpath = $dir . DIRECTORY_SEPARATOR . $file;
+            if (is_dir($fullpath)) {
+                var_dump($fullpath);
+            } else {
+                var_dump($fullpath);
+            }
+        }
+    }
     private function delTree($dir, $results)
     {
         $files = array_diff(scandir($dir), array('.', '..'));
@@ -1108,7 +1165,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                 const msg = "Modules were installed successfully!"
                 $('.modal-body').html(msg);
                 // Display Modal
-                $('#alertModal').modal('show');
+                // $('#alertModal').modal('show');
             }
         </script>
         EOF;
@@ -1121,7 +1178,6 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                 <div class="modal-dialog modal-dialog-centered" role="document">
                     <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="alertModalTitle">Notification</h5>
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                         </button>
