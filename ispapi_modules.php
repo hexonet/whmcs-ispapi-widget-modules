@@ -70,7 +70,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "name" => "SSL Add-on",
             "type" => "addon",
             "deprecated" => true,
-            "files" => ['/addons/ispapissl_addon', '/servers/ispapissl'],
+            "files" => ['/modules/addons/ispapissl_addon', '/modules/servers/ispapissl'],
             "dependencies" => [
                 "required" => [
                     "whmcs-ispapi-registrar"
@@ -307,8 +307,8 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
      */
     public function generateOutput($modules)
     {
-        $this->downloadUnzipGetContents('ispapidomaincheck');
-        die();
+        // var_dump($this->downloadUnzipGetContents('ispapiwidgetaccount'));
+        // die();
 
         $action = App::getFromRequest('action');
         if ($action !== "") {
@@ -346,40 +346,57 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                     "result" => $results
                 ];
             } elseif ($action == "installModule") {
-                return [
-                    "success" => true,
-                    "module" => $module,
-                    "result" => true
-                ];
+                $results = $this->downloadUnzipGetContents($module);
+                if ($results['msg'] === 'success') {
+                    return [
+                        "success" => true,
+                        "module" => $module,
+                        "result" => 'success'
+                    ];
+                } else {
+                    return [
+                        "success" => false,
+                        "module" => $module,
+                        "result" => 'Error in ' . $module . ': ' . $results['msg']
+                    ];
+                }
             } elseif ($action == "removeModule") {
                 $result = [];
                 try {
                     $dirs = $this->map[$module]['files'];
                     if (!empty($dirs)) {
-                        $files = [];
-                        $results = [];
-                        // check if files are removable
+                        // check if files in all dirs are removable
                         foreach ($dirs as $dir) {
-                            $files[$dir] = $this->checkDirAndFileRemovable(ROOTDIR . $dir, []);
-                        }
-                        foreach ($files as $file) {
-                            foreach ($file as $key => $value) {
-                                if ($value == false) {
-                                    return [
-                                        "success" => false,
-                                        "data" => $key . " Permission Denied"
-                                    ];
-                                }
+                            $dir_files = $this->checkDirAndFileRemovable(ROOTDIR . $dir, []);
+                            // the check permission
+                            $permission_check = $this->checkResults($dir_files);
+                            if ($permission_check['result'] == false) {
+                                return [
+                                    "success" => false,
+                                    "data" => $permission_check['msg']
+                                ];
                             }
                         }
-                        // check if success
+                        // when files are remoable, then delete them
+                        $all_delete_files = [];
                         foreach ($dirs as $dir) {
-                            $results[$dir] = $this->delTree(ROOTDIR . $dir, []);
+                            $delete_results = $this->delTree(ROOTDIR . $dir, []);
+                            // add deleted files, in case the user want to see them
+                            $all_delete_files[$dir] = $delete_results;
+                            // check if files were deleted
+                            $results_check = $this->checkResults($delete_results);
+                            if ($permission_check['result'] == false) {
+                                return [
+                                    "success" => false,
+                                    "data" => $results_check['msg']
+                                ];
+                            }
+                            // return success to the user
+                            return [
+                                "success" => true,
+                                "data" => $all_delete_files
+                            ];
                         }
-                        return [
-                            "success" => true,
-                            "data" => $results
-                        ];
                     } else {
                         return [
                             "success" => false,
@@ -472,7 +489,8 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
     }
     private function downloadUnzipGetContents($mapkey)
     {
-
+        $copied_files = [];
+        $msg = '';
         $moduleid = $this->map[$mapkey]['id'];
         $dirs = $this->map[$mapkey]['files'];
         $url = "https://github.com/hexonet/" . $moduleid . "/raw/master/" . $moduleid . "-latest.zip";
@@ -480,50 +498,58 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         $zipdir = ROOTDIR . tempnam(sys_get_temp_dir(), 'zipdir');
         // download data from url
         $download = file_put_contents($zipfile, fopen($url, 'r'));
-        // extract zip file
-        $zip = new ZipArchive();
-        $res = $zip->open($zipfile);
-        $results = [];
-        if ($res === true) {
-            if ($zip->extractTo($zipdir)) {
-                foreach ($dirs as $dir) {
-                    // full path
-                    $sourceDir = $zipdir . $dir;
-                    $destinationDir = ROOTDIR . $dir;
-                    // check if destination dir exist
-                    var_dump($sourceDir);
-                    var_dump($destinationDir);
-                    if (is_dir($destinationDir)) {
-                        //check overwrite permission
-                    } else {
-                        // create the dir first
-                        mkdir($destinationDir, 0777);
-                        // call the copy function
+        if ($download > 0) {
+            // extract zip file
+            $zip = new ZipArchive();
+            $res = $zip->open($zipfile);
+            $results = [];
+            if ($res === true) {
+                if ($zip->extractTo($zipdir)) {
+                    foreach ($dirs as $dir) {
+                        // TODO: check the path is valid, i.e add the missing part of it in the config, e.g. ssl and widgets.
+                        // full path
+                        $src = $zipdir . $dir;
+                        $dst = ROOTDIR . $dir;
+                        $copied_files = $this->custom_copy($src, $dst, []);
+                        $msg = 'success';
                     }
+                } else {
+                    $msg = 'Failed to extract the zip file.';
                 }
             } else {
+                    $msg = 'Failed to open the zip file.';
             }
-           // close zip file
+            // close zip file
             $zip->close();
         } else {
-            echo 0;
-        //
+            $msg = 'Failed to download zip file.';
         }
         // delete the dir
-        var_dump($this->delTree($zipdir, []));
-        var_dump(unlink($zipfile));
+        $this->delTree($zipdir, []);
+        unlink($zipfile);
+        return ['msg' => $msg, 'data' => $copied_files];
     }
-    private function copyDirsAndFiles($dir, $results)
+    private function custom_copy($src, $dst, $results)
     {
+        // open the source directory
+        // $dir = opendir($src);
+        // Make the destination directory if not exist
+        @mkdir($dst, 0777);
+        // Loop through the files in source directory
         $files = array_diff(scandir($dir), array('.', '..'));
-        foreach ($files as $file) {
-            $fullpath = $dir . DIRECTORY_SEPARATOR . $file;
-            if (is_dir($fullpath)) {
-                var_dump($fullpath);
-            } else {
-                var_dump($fullpath);
+        foreach (scandir($src) as $file) {
+            $src_fullpath = $src . DIRECTORY_SEPARATOR . $file;
+            $dst_fullpath = $dst . DIRECTORY_SEPARATOR . $file;
+            if (( $file != '.' ) && ( $file != '..' )) {
+                if (is_dir($src_fullpath)) {
+                    $results = $this->custom_copy($src_fullpath, $dst_fullpath, $results);
+                } else {
+                    $results[$dst_fullpath] = copy($src_fullpath, $dst_fullpath);
+                }
             }
         }
+        //closedir($dir);
+        return $results;
     }
     private function delTree($dir, $results)
     {
@@ -568,21 +594,22 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         return $results;
     }
 
+    private function checkResults($results)
+    {
+        foreach ($results as $key => $value) {
+            if ($value == false) {
+                return ["result" => false, "msg" => $key . " Permission Denied"];
+            }
+        }
+        return ["result" => true,"msg" => "success"];
+    }
+
     /**
      * Fetch data that will be provided to generateOutput method
      * @return array|null data array or null in case of an error
      */
     public function getData()
     {
-        // $dirs = $this->map['ispapidpi']['files'];
-        // $results = [];
-        // foreach ($dirs as $dir) {
-        //     $results[$dir]= $this->delTree(ROOTDIR . $dir, []);
-        // }
-        // $results['error'] = error_get_last();
-        // var_dump($results);
-        // die();
-
         global $CONFIG;
         $modules = [];
         $installed_modules_ids = [];
@@ -722,12 +749,19 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         $not_installed_count = '<span class="small bg-danger" style="border-radius:50%; padding: 0px 5px 0px 5px;">
                         ' . sizeof($not_active_or_installed) . '
                     </span>';
+        $deprecated_size = 0;
+        foreach ($deprecated as $module) {
+            if ($module['status'] != 'not-installed') {
+                $deprecated_size++;
+            }
+        }
         $deprecated_count = '<span class="small bg-warning" style="border-radius:50%; padding: 0px 5px 0px 5px;">
-                        ' . sizeof($deprecated) . '
+                        ' . $deprecated_size . '
                     </span>';
         $smarty->assign('installed_count', $installed_count);
         $smarty->assign('not_installed_count', $not_installed_count);
         $smarty->assign('deprecated_count', $deprecated_count);
+        $smarty->assign('deprecated_size', $deprecated_size);
         // parse content
         $content = '<div class="widget-content-padded" style="max-height: 450px">
                         <div class="row small">
@@ -846,7 +880,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                                     {/if}
                                 </div>
                                 <div id="tab3" class="tab-pane fade">
-                                    {if $deprecated}
+                                    {if $deprecated_size > 0}
                                         <table class="table table-bordered table-condensed" style="margin-top: 4px;">
                                             <thead>
                                                 <tr>
@@ -1133,18 +1167,21 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             });
             $('.module-checkbox:checkbox').change(function () {
                 // TODO: check all checkbox
-                if($(this).is(':checked')){
-                    $('#btn-install').prop('disabled', false);
+                let checkboxs =  $('.module-checkbox:checkbox:checked');
+                if(checkboxs.length == 0){
+                    $('#btn-install').prop('disabled', true);
                 }
                 else{
-                    $('#btn-install').prop('disabled', true);
+                    $('#btn-install').prop('disabled', false);
                 }
             });
             // install modules
             async function installModules(){
                 let modules = [];
+                let success = true;
                 let checkboxs =  $('.module-checkbox:checkbox:checked');
                 for (const checkbox of checkboxs){
+                    // get module id from the checkbox
                     let module = $(checkbox).attr('id');
                     // show & update notification message
                     $('#installation-div').slideDown(500);
@@ -1158,14 +1195,23 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                         error: function (jqXHR, textStatus, errorThrown) { return false; }
                     });
                     // check results
-                    console.log(module, result);
+                    const data = JSON.parse(result.widgetOutput);
+                    if (data.success){
+                        // now nothing just continue
+                    }
+                    else{
+                        success = false;
+                        const msg = data.result;
+                        $('.modal-body-alert').html(msg);
+                        $('#alertModalOther').modal('show');
+                    }
                     $('#installation-div').slideUp(100);
                 }
-                // alert message
-                const msg = "Modules were installed successfully!"
-                $('.modal-body').html(msg);
-                // Display Modal
-                // $('#alertModal').modal('show');
+                if(success){
+                    const msg = "All modules were installed successfully!";
+                    $('.modal-body').html(msg);
+                    $('#alertModal').modal('show');
+                }
             }
         </script>
         EOF;
@@ -1196,7 +1242,6 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                 <div class="modal-dialog modal-dialog-centered" role="document">
                     <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="alertModalTitle">Notification</h5>
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                         </button>
