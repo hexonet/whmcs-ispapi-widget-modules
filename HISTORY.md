@@ -1,3 +1,10 @@
+# [2.2.0](https://github.com/hexonet/whmcs-ispapi-widget-modules/compare/v2.1.1...v2.2.0) (2021-07-01)
+
+
+### Features
+
+* **zipfile:** adding subdirs ([59bdecd](https://github.com/hexonet/whmcs-ispapi-widget-modules/commit/59bdecd09b39808dbb608c47b433ae6b726222f1))
+
 ## [2.1.1](https://github.com/hexonet/whmcs-ispapi-widget-modules/compare/v2.1.0...v2.1.1) (2021-01-20)
 
 

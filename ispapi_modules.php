@@ -90,7 +90,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "prio" => 1
         ]
     ];
-    const VERSION = "2.1.1";
+    const VERSION = "2.2.0";
 
     /**
      * return html code for error case specified by given error message
