@@ -42,7 +42,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "files" => ['/modules/addons/ispapibackorder'],
             "dependencies" => [
                 "required" => [
-                    "whmcs-ispapi-registrar"
+                    "ispapi"
                 ]
             ],
             "prio" => 8
@@ -59,7 +59,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             ],
             "dependencies" => [
                 "required" => [
-                    "whmcs-ispapi-registrar"
+                    "ispapi"
                 ]
             ],
             "files" => ['/modules/addons/ispapipremiumdns'],
@@ -73,7 +73,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "files" => ['/modules/addons/ispapissl_addon', '/modules/servers/ispapissl'],
             "dependencies" => [
                 "required" => [
-                    "whmcs-ispapi-registrar"
+                    "ispapi"
                 ]
             ],
             "prio" => 7
@@ -86,7 +86,8 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "files" => ['/modules/addons/ispapidomaincheck'],
             "dependencies" => [
                 "required" => [
-                    "whmcs-ispapi-registrar"
+                    "ispapi",
+                    "ispapipremiumdns" // for testing only. TODO: remove this line
                 ]
             ],
             "prio" => 9
@@ -100,14 +101,14 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                 "url" => "https://docs.whmcs.com/Registrar_TLD_Sync",
                 "case" => "whmcs",
                 "whmcs" => "7.10",
-                "replacement" => "whmcs-ispapi-registrar"
+                "replacement" => "ispapi"
                 ],
             "files" => [
                 "/modules/addons/ispapidpi"
             ],
             "dependencies" => [
                 "required" => [
-                    "whmcs-ispapi-registrar"
+                    "ispapi"
                 ]
             ],
             "replacedby" => "ispapiimporter",
@@ -132,7 +133,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "files" => ['/modules/addons/ispapidomainimport'],
             "dependencies" => [
                 "required" => [
-                    "whmcs-ispapi-registrar"
+                    "ispapi"
                 ]
             ],
             "prio" => 4
@@ -145,7 +146,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "files" => ['/modules/addons/ispapiimporter'],
             "dependencies" => [
                 "required" => [
-                    "whmcs-ispapi-registrar"
+                    "ispapi"
                 ]
             ],
             "prio" => 3
@@ -158,7 +159,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "files" => ['/modules/widgets/ispapi_account.php'],
             "dependencies" => [
                 "required" => [
-                    "whmcs-ispapi-registrar"
+                    "ispapi"
                 ]
             ],
             "prio" => 2
@@ -182,7 +183,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "files" => ['/modules/widgets/ispapi_monitoring.php'],
             "dependencies" => [
                 "required" => [
-                    "whmcs-ispapi-registrar"
+                    "ispapi"
                 ]
             ],
             "prio" => 1
@@ -308,12 +309,12 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
     public function generateOutput($modules)
     {
         // var_dump($this->downloadUnzipGetContents('ispapiwidgetaccount'));
+        // var_dump($this->downloadUnzipGetContents('ispapidomaincheck'));
         // die();
+        // var_dump($this->getDependenciesMap());
 
         $action = App::getFromRequest('action');
         if ($action !== "") {
-            //$setting = \WHMCS\Config\Setting::setValue("ispapiMonitoringWidget", $status);
-            //$success = $setting::getValue("ispapiMonitoringWidget") === $status;
             $module = App::getFromRequest('module');
             $type = App::getFromRequest('type');
             // Activate
@@ -493,7 +494,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         $msg = '';
         $moduleid = $this->map[$mapkey]['id'];
         $dirs = $this->map[$mapkey]['files'];
-        $url = "https://github.com/hexonet/" . $moduleid . "/raw/master/" . $moduleid . "-latest.zip";
+        $url = "https://github.com/hexonet/d" . $moduleid . "/raw/master/" . $moduleid . "-latest.zip";
         $zipfile = ROOTDIR . tempnam(sys_get_temp_dir(), 'zipfile') . $moduleid . "-latest.zip";
         $zipdir = ROOTDIR . tempnam(sys_get_temp_dir(), 'zipdir');
         // download data from url
@@ -510,7 +511,12 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                         // full path
                         $src = $zipdir . $dir;
                         $dst = ROOTDIR . $dir;
-                        $copied_files = $this->custom_copy($src, $dst, []);
+                        // adding a check for widgets
+                        if (str_ends_with($src, ".php")) {
+                            $copied_files = $this->custom_copy(dirname($src), dirname($dst), []);
+                        } else {
+                            $copied_files = $this->custom_copy($src, $dst, []);
+                        }
                         $msg = 'success';
                     }
                 } else {
@@ -536,7 +542,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         // Make the destination directory if not exist
         @mkdir($dst, 0777);
         // Loop through the files in source directory
-        $files = array_diff(scandir($dir), array('.', '..'));
+        // $files = array_diff(scandir($dir), array('.', '..'));
         foreach (scandir($src) as $file) {
             $src_fullpath = $src . DIRECTORY_SEPARATOR . $file;
             $dst_fullpath = $dst . DIRECTORY_SEPARATOR . $file;
@@ -727,7 +733,35 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         }
         return $modules;
     }
-
+    private function getDependenciesMap($not_installed_modules, $installed_modules)
+    {
+        // get the module dependencies
+        $dependencies_arr = [];
+        foreach ($not_installed_modules as $not_installed) {
+            if ($not_installed['status'] === 'not-installed') {
+                // get its dependencies
+                $id = $not_installed['whmcsmoduleid'];
+                $dependencies = $this->map[$id]['dependencies']['required'];
+                if (sizeof($dependencies) > 0) {
+                    foreach ($dependencies as $dependcy) {
+                        foreach ($installed_modules as $installed) {
+                            if ($installed['whmcsmoduleid'] == $dependcy) {
+                                $dependencies_arr[$id][$dependcy] = false;
+                                continue;
+                            } else {
+                                $dependencies_arr[$id][$dependcy] = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return json_encode($dependencies_arr);
+        // return $return;
+    }
+    private function getInstalledModules()
+    {
+    }
     private function getSmartyHTML($installed, $not_active_or_installed, $deprecated)
     {
         // TODO: handle the case where there is not modules in a specific type
@@ -737,7 +771,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         $smarty->assign('not_active_or_installed', $not_active_or_installed);
         $smarty->assign('deprecated', $deprecated);
         // get required js code
-        $jscript = self::generateOutputJS();
+        $jscript = self::generateOutputJS($not_active_or_installed, $installed);
         $smarty->assign('jscript', $jscript);
         // get modals
         $modals = self::generateModals();
@@ -763,7 +797,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         $smarty->assign('deprecated_count', $deprecated_count);
         $smarty->assign('deprecated_size', $deprecated_size);
         // parse content
-        $content = '<div class="widget-content-padded" style="max-height: 450px">
+        $content = '<div class="widget-content-padded" style="/*max-height: 450px*/">
                         <div class="row small">
                             <ul class="nav nav-tabs">
                                 <li class="active"><a data-toggle="tab" href="#tab1">Installed {$installed_count}</a></li>
@@ -822,8 +856,8 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                                         <table class="table table-bordered table-condensed" style="margin-top: 4px; margin-bottom: 10px">
                                             <thead>
                                                 <tr>
-                                                    <th scope="col" style="width: 5%"><input type="checkbox" class="form-check-input" id="checkall"></th>
-                                                    <th scope="col" style="width: 40%">Name</th>
+                                                    <th scope="col" style="width: 5%"><input onChange="selectUnselectCheckboxs(this, \'install\');" type="checkbox" class="form-check-input" id="checkall"></th>
+                                                    <th scope="col" style="width: 35%">Name</th>
                                                     <th scope="col" style="width: 30%">Status</th>
                                                     <th scope="col" style="width: 25%">Actions</th>
                                                 </tr>
@@ -833,7 +867,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                                                     <tr>
                                                         <td>
                                                             {if $module.status == \'not-installed\'}
-                                                                <input type="checkbox" class="module-checkbox" id="{$module.whmcsmoduleid}">
+                                                                <input type="checkbox" class="module-checkbox" onChange="enableDisableInstallBtn(\'install\');" id="{$module.whmcsmoduleid}">
                                                             {/if}
                                                         </td>
                                                         <td>{$module.name}</td>
@@ -960,10 +994,12 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         return $smarty->fetch('eval:' . $content);
     }
 
-    private static function generateOutputJS()
+    private function generateOutputJS($not_installed_modules, $installed_modules_ids)
     {
+        $dependencies_arr = $this->getDependenciesMap($not_installed_modules, $installed_modules_ids);
         return <<<EOF
         <script type="text/javascript">
+            const dependency_map = $dependencies_arr;
             const loadingIcon = '<i class="fas fa-spinner fa-spin"></i>';
             // activate/deactivate logic
             $('.activatebtn, .deactivatebtn').on('click', function (event) {
@@ -1149,24 +1185,21 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                     return false;
                 }
             }
-            $('#checkall:checkbox').change(function () {
-                if($(this).is(':checked')) {
+            async function selectUnselectCheckboxs(selector, operation_type){
+                if($(selector).is(':checked')) {
                     $('tbody#notActiveOrInstalled input:checkbox').each(function() {
                         $(this).prop('checked', true);
                     });
-                    // enable install button
-                    $('#btn-install').prop('disabled', false);
                 }
                 else{
                     $('tbody#notActiveOrInstalled input:checkbox').each(function() {
                         $(this).removeAttr('checked');
                     });
-                    // disable install button
-                    $('#btn-install').prop('disabled', true);
                 }
-            });
-            $('.module-checkbox:checkbox').change(function () {
-                // TODO: check all checkbox
+                // .each() iterates over the array synchronously
+                enableDisableInstallBtn('install');
+            }
+            async function enableDisableInstallBtn(operation_type){
                 let checkboxs =  $('.module-checkbox:checkbox:checked');
                 if(checkboxs.length == 0){
                     $('#btn-install').prop('disabled', true);
@@ -1174,7 +1207,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                 else{
                     $('#btn-install').prop('disabled', false);
                 }
-            });
+            }
             // install modules
             async function installModules(){
                 let modules = [];
@@ -1183,34 +1216,53 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                 for (const checkbox of checkboxs){
                     // get module id from the checkbox
                     let module = $(checkbox).attr('id');
-                    // show & update notification message
-                    $('#installation-div').slideDown(500);
-                    $('#installation-notice').html('Please wait, installing: ' + module);
-                    // send xhr request
-                    const url = WHMCS.adminUtils.getAdminRouteUrl('/widget/refresh&widget=IspapiModulesWidget&module='+ module + '&action=installModule');
-                    const result = await $.ajax({
-                        url: url,
-                        type: 'GET',
-                        success: function (data) { return true;},
-                        error: function (jqXHR, textStatus, errorThrown) { return false; }
-                    });
-                    // check results
-                    const data = JSON.parse(result.widgetOutput);
-                    if (data.success){
-                        // now nothing just continue
-                    }
-                    else{
+                    // install the module
+                    let result = await installSingleModule(module);
+                    if (typeof result != "boolean"){
                         success = false;
-                        const msg = data.result;
-                        $('.modal-body-alert').html(msg);
+                        $('.modal-body-alert').html(result);
                         $('#alertModalOther').modal('show');
+                        $('#installation-div').slideUp(100);
                     }
-                    $('#installation-div').slideUp(100);
                 }
-                if(success){
-                    const msg = "All modules were installed successfully!";
+                if (success){
+                    const msg = "Installation finished successfully!";
                     $('.modal-body').html(msg);
                     $('#alertModal').modal('show');
+                }
+            }
+            async function installSingleModule(module_id){
+                // show & update notification message
+                $('#installation-div').slideDown(500);
+                $('#installation-notice').html('Please wait, installing: ' + module_id);
+                // send xhr request
+                const url = WHMCS.adminUtils.getAdminRouteUrl('/widget/refresh&widget=IspapiModulesWidget&module='+ module_id + '&action=installModule');
+                const result = await $.ajax({
+                    url: url,
+                    type: 'GET',
+                    success: function (data) { return true;},
+                    error: function (jqXHR, textStatus, errorThrown) { return false; }
+                });
+                // check results
+                const data = JSON.parse(result.widgetOutput);
+                if (data.success){
+                    return true;
+                }
+                else{
+                    const msg = data.result;
+                    return msg;
+                }
+            }
+            async function checkDependency(module_id){
+                const dependency_list = dependency_map[module_id];
+                // check if the module have at least one dependecy
+                if (dependency_list.lenght != undefined){
+                    for (var key in dependency_list) {
+                        var value = dependency_list[key];
+                        if(value == false){
+                            // install the dependency
+                        }
+                    }
                 }
             }
         </script>
