@@ -39,7 +39,8 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "name" => "Backorder Add-on",
             "type" => "addon", // type (registrar, addon)
             "deprecated" => false,
-            "files" => ['/modules/addons/ispapibackorder'],
+            "cleanup_files" => ['/modules/addons/ispapibackorder'],
+            "install_files" => ['/modules/addons/ispapibackorder'],
             "dependencies" => [
                 "required" => [
                     "ispapi"
@@ -62,7 +63,8 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                     "ispapi"
                 ]
             ],
-            "files" => ['/modules/addons/ispapipremiumdns'],
+            "cleanup_files" => ['/modules/addons/ispapipremiumdns'],
+            "install_files" => ['/modules/addons/ispapipremiumdns'],
             "prio" => 6
         ],
         "ispapissl" => [
@@ -70,7 +72,8 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "name" => "SSL Add-on",
             "type" => "addon",
             "deprecated" => true,
-            "files" => ['/modules/addons/ispapissl_addon', '/modules/servers/ispapissl'],
+            "cleanup_files" => ['/modules/addons/ispapissl_addon', '/modules/servers/ispapissl'],
+            "install_files" => ['/modules/addons/ispapissl_addon', '/modules/servers/ispapissl'],
             "dependencies" => [
                 "required" => [
                     "ispapi"
@@ -83,7 +86,8 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "name" => "Domain Checker Add-on",
             "type" => "addon",
             "deprecated" => false,
-            "files" => ['/modules/addons/ispapidomaincheck'],
+            "cleanup_files" => ['/modules/addons/ispapidomaincheck'],
+            "install_files" => ['/modules/addons/ispapidomaincheck'],
             "dependencies" => [
                 "required" => [
                     "ispapi",
@@ -103,9 +107,8 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                 "whmcs" => "7.10",
                 "replacement" => "ispapi"
                 ],
-            "files" => [
-                "/modules/addons/ispapidpi"
-            ],
+            "cleanup_files" => ["/modules/addons/ispapidpi"],
+            "install_files" => ["/modules/addons/ispapidpi"],
             "dependencies" => [
                 "required" => [
                     "ispapi"
@@ -119,7 +122,8 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "name" => "Registrar Module",
             "type" => "registrar",
             "deprecated" => false,
-            "files" => ['/modules/registrar/ispapi'],
+            "cleanup_files" => ['/modules/registrar/ispapi'],
+            "install_files" => ['/modules/registrar/ispapi'],
             "dependencies" => [
                 "required" => []
             ],
@@ -130,7 +134,8 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "name" => "Domain Importer Add-on",
             "type" => "addon",
             "deprecated" => true,
-            "files" => ['/modules/addons/ispapidomainimport'],
+            "cleanup_files" => ['/modules/addons/ispapidomainimport'],
+            "install_files" => ['/modules/addons/ispapidomainimport'],
             "dependencies" => [
                 "required" => [
                     "ispapi"
@@ -143,7 +148,8 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "name" => "ISPAPI Importer Add-on",
             "type" => "addon",
             "deprecated" => false,
-            "files" => ['/modules/addons/ispapiimporter'],
+            "cleanup_files" => ['/modules/addons/ispapiimporter'],
+            "install_files" => ['/modules/addons/ispapiimporter'],
             "dependencies" => [
                 "required" => [
                     "ispapi"
@@ -156,7 +162,8 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "name" => "Account Widget",
             "type" => "widget",
             "deprecated" => false,
-            "files" => ['/modules/widgets/ispapi_account.php'],
+            "cleanup_files" => ['/modules/widgets/ispapi_account.php'],
+            "install_files" => ['/modules/widgets/ispapi_account.php'],
             "dependencies" => [
                 "required" => [
                     "ispapi"
@@ -169,7 +176,8 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "name" => "Modules Widget",
             "type" => "widget",
             "deprecated" => false,
-            "files" => ['/modules/widgets/ispapi_modules.php'],
+            "cleanup_files" => ['/modules/widgets/ispapi_modules.php'],
+            "install_files" => ['/modules/widgets/ispapi_modules.php'],
             "dependencies" => [
                 "required" => []
             ],
@@ -180,7 +188,8 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "name" => "Monitoring Widget",
             "type" => "widget",
             "deprecated" => false,
-            "files" => ['/modules/widgets/ispapi_monitoring.php'],
+            "cleanup_files" => ['/modules/widgets/ispapi_monitoring.php'],
+            "install_files" => ['/modules/widgets/ispapi_monitoring.php'],
             "dependencies" => [
                 "required" => [
                     "ispapi"
@@ -364,7 +373,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             } elseif ($action == "removeModule") {
                 $result = [];
                 try {
-                    $dirs = $this->map[$module]['files'];
+                    $dirs = $this->map[$module]['install_files'];
                     if (!empty($dirs)) {
                         // check if files in all dirs are removable
                         foreach ($dirs as $dir) {
@@ -493,7 +502,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         $copied_files = [];
         $msg = '';
         $moduleid = $this->map[$mapkey]['id'];
-        $dirs = $this->map[$mapkey]['files'];
+        $dirs = $this->map[$mapkey]['install_files'];
         $url = "https://github.com/hexonet/" . $moduleid . "/raw/master/" . $moduleid . "-latest.zip";
         $zipfile = ROOTDIR . tempnam(sys_get_temp_dir(), 'zipfile') . $moduleid . "-latest.zip";
         $zipdir = ROOTDIR . tempnam(sys_get_temp_dir(), 'zipdir');
@@ -809,14 +818,20 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                                         <table class="table table-bordered table-condensed" style="margin-top: 4px;">
                                             <thead>
                                                 <tr>
-                                                <th scope="col" style="width: 40%">Name</th>
-                                                <th scope="col" style="width: 30%">Version</th>
-                                                <th scope="col" style="width: 30%">Actions</th>
+                                                    <th scope="col" style="width: 5%"><input onChange="selectUnselectCheckboxs(this, \'upgrade\');" type="checkbox" class="form-check-input" id="checkallUpgrade"></th>
+                                                    <th scope="col" style="width: 35%">Name</th>
+                                                    <th scope="col" style="width: 30%">Version</th>
+                                                    <th scope="col" style="width: 30%">Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {foreach $installed as $module}
                                                     <tr>
+                                                        <td>
+                                                            {if $module.no_latest_used}
+                                                                <input type="checkbox" class="module-checkbox" onChange="checkboxChange(this, \'upgrade\');" id="{$module.whmcsmoduleid}">
+                                                            {/if}
+                                                        </td>
                                                         <td>{$module.name}</td>
                                                         <td>
                                                             {if $module.no_latest_used}
@@ -844,6 +859,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                                                 {/foreach}
                                             </tbody>
                                         </table>
+                                       
                                     {else}
                                         <div class="widget-content-padded">
                                             <div class="text-center">No modules found.</div>
@@ -856,9 +872,9 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                                             <thead>
                                                 <tr>
                                                     <th scope="col" style="width: 5%"><input onChange="selectUnselectCheckboxs(this, \'install\');" type="checkbox" class="form-check-input" id="checkall"></th>
-                                                    <th scope="col" style="width: 30%">Name</th>
+                                                    <th scope="col" style="width: 35%">Name</th>
                                                     <th scope="col" style="width: 30%">Status</th>
-                                                    <th scope="col" style="width: 25%">Actions</th>
+                                                    <th scope="col" style="width: 30%">Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="notActiveOrInstalled">
@@ -866,7 +882,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                                                     <tr>
                                                         <td>
                                                             {if $module.status == \'not-installed\'}
-                                                                <input type="checkbox" class="module-checkbox" onChange="enableDisableInstallBtn(\'install\');" id="{$module.whmcsmoduleid}">
+                                                                <input type="checkbox" class="module-checkbox" onChange="checkboxChange(this, \'install\');" id="{$module.whmcsmoduleid}">
                                                             {/if}
                                                         </td>
                                                         <td>{$module.name}</td>
@@ -998,7 +1014,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         $dependencies_arr = $this->getDependenciesMap($not_installed_modules, $installed_modules_ids);
         return <<<EOF
         <script type="text/javascript">
-            const dependency_map = $dependencies_arr;
+            var dependency_map = $dependencies_arr;
             const loadingIcon = '<i class="fas fa-spinner fa-spin"></i>';
             // activate/deactivate logic
             $('.activatebtn, .deactivatebtn').on('click', function (event) {
@@ -1185,20 +1201,36 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                 }
             }
             async function selectUnselectCheckboxs(selector, operation_type){
+                const checkboxes = $('tbody#notActiveOrInstalled input:checkbox');
                 if($(selector).is(':checked')) {
-                    $('tbody#notActiveOrInstalled input:checkbox').each(function() {
-                        $(this).prop('checked', true);
-                    });
+                    for(const checkbox of checkboxes) {
+                        $(checkbox).prop('checked', true);
+                        module_id = $(checkbox).attr('id');
+                        let result = await checkDependency(module_id, 'select');
+                    }
                 }
                 else{
-                    $('tbody#notActiveOrInstalled input:checkbox').each(function() {
-                        $(this).removeAttr('checked');
-                    });
+                    for(const checkbox of checkboxes) {
+                        $(checkbox).removeAttr('checked');
+                        module_id = $(checkbox).attr('id');
+                        let result = await checkDependency(module_id, 'unselect');
+                    }
                 }
                 // .each() iterates over the array synchronously
-                enableDisableInstallBtn('install');
+                checkboxChange(selector, 'install');
             }
-            async function enableDisableInstallBtn(operation_type){
+            async function checkboxChange(reference, operation_type){
+                let module_id = $(reference).attr('id');
+                if($(reference).is(':checked')) {
+                    checkDependency(module_id, 'select');
+                }
+                else{
+                    checkDependency(module_id, 'unselect');
+                }
+                // operation button check
+                enableDisableBtn(operation_type);
+            }
+            async function enableDisableBtn(operation_type){
                 let checkboxs =  $('.module-checkbox:checkbox:checked');
                 if(checkboxs.length == 0){
                     $('#btn-install').prop('disabled', true);
@@ -1207,7 +1239,6 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                     $('#btn-install').prop('disabled', false);
                 }
             }
-            // install modules
             async function installModules(){
                 let modules = [];
                 let success = true;
@@ -1215,22 +1246,11 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                 for (const checkbox of checkboxs){
                     // get module id from the checkbox
                     let module = $(checkbox).attr('id');
-                    // install dependency
-                    let dependency_installation = await checkDependency(module);
-                    if (typeof dependency_installation == "boolean" && dependency_installation == true){
-                        // install the module
-                        let result = await installSingleModule(module, 'module');
-                        if (typeof result != "boolean"){
-                            success = false;
-                            $('.modal-body-alert').html(result);
-                            $('#alertModalOther').modal('show');
-                            $('#installation-div').slideUp(100);
-                        }
-                    }
-                    else{
-                    // abort, failed to install dependency
+                    // install the module
+                    let result = await installSingleModule(module, 'module');
+                    if (typeof result != "boolean"){
                         success = false;
-                        $('.modal-body-alert').html(dependency_installation);
+                        $('.modal-body-alert').html(result);
                         $('#alertModalOther').modal('show');
                         $('#installation-div').slideUp(100);
                     }
@@ -1265,16 +1285,18 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                     return msg;
                 }
             }
-            async function checkDependency(module_id){
+            async function checkDependency(module_id, mode){
                 const dependency_list = dependency_map[module_id];
                 // check if the module have at least one dependecy
                 if (dependency_list != undefined){
                     for (var key in dependency_list) {
-                        var value = dependency_list[key];
-                        if(value == false){
-                            // install the dependency
-                            let result = await installSingleModule(key, 'dependency');
-                            return result == true ? true : "Failed to install dependency: " + module_id + " because of: " + result;
+                        if(dependency_list[key] == false){
+                            if(mode == 'select'){
+                                $('#'+key).prop({'checked':true, 'disabled': true});
+                            }
+                            else{
+                                $('#'+key).prop({'checked':false, 'disabled': false});
+                            }
                         }
                     }
                 }
