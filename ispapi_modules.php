@@ -87,7 +87,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "dependencies" => [
                 "required" => [
                     "ispapi",
-                    "ispapipremiumdns" // for testing only. TODO: remove this line
+                    "ispapibackorder" // for testing only. TODO: remove this line
                 ]
             ],
             "prio" => 9
@@ -494,7 +494,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         $msg = '';
         $moduleid = $this->map[$mapkey]['id'];
         $dirs = $this->map[$mapkey]['files'];
-        $url = "https://github.com/hexonet/d" . $moduleid . "/raw/master/" . $moduleid . "-latest.zip";
+        $url = "https://github.com/hexonet/" . $moduleid . "/raw/master/" . $moduleid . "-latest.zip";
         $zipfile = ROOTDIR . tempnam(sys_get_temp_dir(), 'zipfile') . $moduleid . "-latest.zip";
         $zipdir = ROOTDIR . tempnam(sys_get_temp_dir(), 'zipdir');
         // download data from url
@@ -513,9 +513,9 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                         $dst = ROOTDIR . $dir;
                         // adding a check for widgets
                         if (str_ends_with($src, ".php")) {
-                            $copied_files = $this->custom_copy(dirname($src), dirname($dst), []);
+                            $copied_files = $this->customCopy(dirname($src), dirname($dst), []);
                         } else {
-                            $copied_files = $this->custom_copy($src, $dst, []);
+                            $copied_files = $this->customCopy($src, $dst, []);
                         }
                         $msg = 'success';
                     }
@@ -535,7 +535,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         unlink($zipfile);
         return ['msg' => $msg, 'data' => $copied_files];
     }
-    private function custom_copy($src, $dst, $results)
+    private function customCopy($src, $dst, $results)
     {
         // open the source directory
         // $dir = opendir($src);
@@ -548,7 +548,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             $dst_fullpath = $dst . DIRECTORY_SEPARATOR . $file;
             if (( $file != '.' ) && ( $file != '..' )) {
                 if (is_dir($src_fullpath)) {
-                    $results = $this->custom_copy($src_fullpath, $dst_fullpath, $results);
+                    $results = $this->customCopy($src_fullpath, $dst_fullpath, $results);
                 } else {
                     $results[$dst_fullpath] = copy($src_fullpath, $dst_fullpath);
                 }
@@ -744,12 +744,11 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                 $dependencies = $this->map[$id]['dependencies']['required'];
                 if (sizeof($dependencies) > 0) {
                     foreach ($dependencies as $dependcy) {
+                        $dependencies_arr[$id][$dependcy] = false;
                         foreach ($installed_modules as $installed) {
-                            if ($installed['whmcsmoduleid'] == $dependcy) {
-                                $dependencies_arr[$id][$dependcy] = false;
-                                continue;
-                            } else {
+                            if ($installed['whmcsmoduleid'] === $dependcy) {
                                 $dependencies_arr[$id][$dependcy] = true;
+                                continue; // continue to next dependency
                             }
                         }
                     }
@@ -857,7 +856,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                                             <thead>
                                                 <tr>
                                                     <th scope="col" style="width: 5%"><input onChange="selectUnselectCheckboxs(this, \'install\');" type="checkbox" class="form-check-input" id="checkall"></th>
-                                                    <th scope="col" style="width: 35%">Name</th>
+                                                    <th scope="col" style="width: 30%">Name</th>
                                                     <th scope="col" style="width: 30%">Status</th>
                                                     <th scope="col" style="width: 25%">Actions</th>
                                                 </tr>
@@ -898,10 +897,10 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                                                 {/foreach}
                                             </tbody>
                                         </table>
-                                        <div class="row">
-                                            <div class="col-sm-12" style="display: inline-flex;">
+                                        <div class="">
+                                            <div class="col-sm-12" style="display: inline-flex; padding: 0px;">
                                                 <button disabled class="btn btn-success btn-sm" onclick="installModules();" id="btn-install">Install Selected <i class="fas fa-arrow-right"></i></button>
-                                                <div class="text-warning" id="installation-div" style="display:none ;padding: 7px 0px 0px 10px;font-size: 12px;">
+                                                <div class="text-warning" id="installation-div" style="display:none ;padding: 7px 0px 0px 10px;font-size: 10px;">
                                                     <i class="fas fa-spinner fa-spin"></i>
                                                     <span id="installation-notice" >Please wait, Installing x </span>
                                                 </div>
@@ -1216,11 +1215,22 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                 for (const checkbox of checkboxs){
                     // get module id from the checkbox
                     let module = $(checkbox).attr('id');
-                    // install the module
-                    let result = await installSingleModule(module);
-                    if (typeof result != "boolean"){
+                    // install dependency
+                    let dependency_installation = await checkDependency(module);
+                    if (typeof dependency_installation == "boolean" && dependency_installation == true){
+                        // install the module
+                        let result = await installSingleModule(module, 'module');
+                        if (typeof result != "boolean"){
+                            success = false;
+                            $('.modal-body-alert').html(result);
+                            $('#alertModalOther').modal('show');
+                            $('#installation-div').slideUp(100);
+                        }
+                    }
+                    else{
+                    // abort, failed to install dependency
                         success = false;
-                        $('.modal-body-alert').html(result);
+                        $('.modal-body-alert').html(dependency_installation);
                         $('#alertModalOther').modal('show');
                         $('#installation-div').slideUp(100);
                     }
@@ -1231,10 +1241,10 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                     $('#alertModal').modal('show');
                 }
             }
-            async function installSingleModule(module_id){
+            async function installSingleModule(module_id, installation_case = ''){
                 // show & update notification message
                 $('#installation-div').slideDown(500);
-                $('#installation-notice').html('Please wait, installing: ' + module_id);
+                $('#installation-notice').html('Please wait, installing <b>' + installation_case + '</b> : ' + module_id);
                 // send xhr request
                 const url = WHMCS.adminUtils.getAdminRouteUrl('/widget/refresh&widget=IspapiModulesWidget&module='+ module_id + '&action=installModule');
                 const result = await $.ajax({
@@ -1243,6 +1253,8 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                     success: function (data) { return true;},
                     error: function (jqXHR, textStatus, errorThrown) { return false; }
                 });
+                // hide notification message
+                $('#installation-div').slideUp(500);
                 // check results
                 const data = JSON.parse(result.widgetOutput);
                 if (data.success){
@@ -1256,14 +1268,17 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             async function checkDependency(module_id){
                 const dependency_list = dependency_map[module_id];
                 // check if the module have at least one dependecy
-                if (dependency_list.lenght != undefined){
+                if (dependency_list != undefined){
                     for (var key in dependency_list) {
                         var value = dependency_list[key];
                         if(value == false){
                             // install the dependency
+                            let result = await installSingleModule(key, 'dependency');
+                            return result == true ? true : "Failed to install dependency: " + module_id + " because of: " + result;
                         }
                     }
                 }
+                return true;
             }
         </script>
         EOF;
