@@ -179,7 +179,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "cleanup_files" => ['/modules/widgets/ispapi_modules.php'],
             "install_files" => ['/modules/widgets/ispapi_modules.php'],
             "dependencies" => [
-                "required" => []
+                "required" => ["ispapi"]
             ],
             "prio" => 0
         ],
@@ -318,7 +318,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
     public function generateOutput($modules)
     {
         // var_dump($this->downloadUnzipGetContents('ispapiwidgetaccount'));
-        // var_dump($this->downloadUnzipGetContents('ispapidomaincheck'));
+        // $this->downloadUnzipGetContents('ispapidomaincheck');
         // die();
         // var_dump($this->getDependenciesMap());
 
@@ -505,67 +505,39 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         $dirs = $this->map[$mapkey]['install_files'];
         $url = "https://github.com/hexonet/" . $moduleid . "/raw/master/" . $moduleid . "-latest.zip";
         $zipfile = ROOTDIR . tempnam(sys_get_temp_dir(), 'zipfile') . $moduleid . "-latest.zip";
-        $zipdir = ROOTDIR . tempnam(sys_get_temp_dir(), 'zipdir');
         // download data from url
         $download = file_put_contents($zipfile, fopen($url, 'r'));
         if ($download > 0) {
             // extract zip file
             $zip = new ZipArchive();
             $res = $zip->open($zipfile);
-            $results = [];
-            if ($res === true) {
-                if ($zip->extractTo($zipdir)) {
-                    foreach ($dirs as $dir) {
-                        // TODO: check the path is valid, i.e add the missing part of it in the config, e.g. ssl and widgets.
-                        // full path
-                        $src = $zipdir . $dir;
-                        $dst = ROOTDIR . $dir;
-                        // adding a check for widgets
-                        if (str_ends_with($src, ".php")) {
-                            $copied_files = $this->customCopy(dirname($src), dirname($dst), []);
-                        } else {
-                            $copied_files = $this->customCopy($src, $dst, []);
+            if ($res) {
+                $entries = [];
+                foreach ($dirs as $dir) {
+                    for ($i = 0; $i < $zip->numFiles; $i++) {
+                        $filename = $zip->getNameIndex($i);
+                        $fileinfo = pathinfo($filename);
+                        if (($fileinfo['extension'] != null) && str_starts_with(DIRECTORY_SEPARATOR . $filename, $dir)) {
+                            $entries[] = $filename;
                         }
-                        $msg = 'success';
                     }
-                } else {
-                    $msg = 'Failed to extract the zip file.';
                 }
-            } else {
-                    $msg = 'Failed to open the zip file.';
+                // extract files
+                $extract = $zip->extractTo(ROOTDIR . DIRECTORY_SEPARATOR, $entries);
+                if ($extract) {
+                    $msg = 'success';
+                } else {
+                    $msg = 'Failed to extract files!';
+                }
             }
-            // close zip file
             $zip->close();
         } else {
             $msg = 'Failed to download zip file.';
         }
-        // delete the dir
-        $this->delTree($zipdir, []);
         unlink($zipfile);
         return ['msg' => $msg, 'data' => $copied_files];
     }
-    private function customCopy($src, $dst, $results)
-    {
-        // open the source directory
-        // $dir = opendir($src);
-        // Make the destination directory if not exist
-        @mkdir($dst, 0777);
-        // Loop through the files in source directory
-        // $files = array_diff(scandir($dir), array('.', '..'));
-        foreach (scandir($src) as $file) {
-            $src_fullpath = $src . DIRECTORY_SEPARATOR . $file;
-            $dst_fullpath = $dst . DIRECTORY_SEPARATOR . $file;
-            if (( $file != '.' ) && ( $file != '..' )) {
-                if (is_dir($src_fullpath)) {
-                    $results = $this->customCopy($src_fullpath, $dst_fullpath, $results);
-                } else {
-                    $results[$dst_fullpath] = copy($src_fullpath, $dst_fullpath);
-                }
-            }
-        }
-        //closedir($dir);
-        return $results;
-    }
+
     private function delTree($dir, $results)
     {
         $files = array_diff(scandir($dir), array('.', '..'));
@@ -744,27 +716,25 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
     }
     private function getDependenciesMap($not_installed_modules, $installed_modules)
     {
-        // get the module dependencies
+        // get the module dependencies, and check if they are installed
         $dependencies_arr = [];
         foreach ($not_installed_modules as $not_installed) {
-            if ($not_installed['status'] === 'not-installed') {
-                // get its dependencies
-                $id = $not_installed['whmcsmoduleid'];
-                $dependencies = $this->map[$id]['dependencies']['required'];
-                if (sizeof($dependencies) > 0) {
-                    foreach ($dependencies as $dependcy) {
-                        $dependencies_arr[$id][$dependcy] = false;
-                        foreach ($installed_modules as $installed) {
-                            if ($installed['whmcsmoduleid'] === $dependcy) {
-                                $dependencies_arr[$id][$dependcy] = true;
-                                continue; // continue to next dependency
-                            }
+            // get its dependencies
+            $id = $not_installed['whmcsmoduleid'];
+            $dependencies = $this->map[$id]['dependencies']['required'];
+            if (sizeof($dependencies) > 0) {
+                foreach ($dependencies as $dependcy) {
+                    $dependencies_arr[$id][$dependcy] = false;
+                    foreach ($installed_modules as $installed) {
+                        if ($installed['whmcsmoduleid'] === $dependcy) {
+                            $dependencies_arr[$id][$dependcy] = true;
+                            continue; // continue to next dependency
                         }
                     }
                 }
             }
         }
-        return json_encode($dependencies_arr);
+        return $dependencies_arr;
         // return $return;
     }
     private function getInstalledModules()
@@ -824,12 +794,12 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                                                     <th scope="col" style="width: 30%">Actions</th>
                                                 </tr>
                                             </thead>
-                                            <tbody>
+                                            <tbody id="installationTbody">
                                                 {foreach $installed as $module}
                                                     <tr>
                                                         <td>
                                                             {if $module.no_latest_used}
-                                                                <input type="checkbox" class="module-checkbox" onChange="checkboxChange(this, \'upgrade\');" id="{$module.whmcsmoduleid}">
+                                                                <input type="checkbox" class="upgrade-checkbox" onChange="checkboxChange(this, \'upgrade\');" id="{$module.whmcsmoduleid}">
                                                             {/if}
                                                         </td>
                                                         <td>{$module.name}</td>
@@ -859,7 +829,15 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                                                 {/foreach}
                                             </tbody>
                                         </table>
-                                       
+                                       <div class="">
+                                            <div class="col-sm-12" style="display: inline-flex; padding: 0px;">
+                                                <button disabled class="btn btn-success btn-sm" onclick="upgradeModules();" id="btn-upgrade">Upgrade Selected <i class="fas fa-arrow-right"></i></button>
+                                                <div class="text-warning" id="installation-div" style="display:none ;padding: 7px 0px 0px 10px;font-size: 10px;">
+                                                    <i class="fas fa-spinner fa-spin"></i>
+                                                    <span id="installation-notice" >Please wait, Upgrading x </span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     {else}
                                         <div class="widget-content-padded">
                                             <div class="text-center">No modules found.</div>
@@ -882,7 +860,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                                                     <tr>
                                                         <td>
                                                             {if $module.status == \'not-installed\'}
-                                                                <input type="checkbox" class="module-checkbox" onChange="checkboxChange(this, \'install\');" id="{$module.whmcsmoduleid}">
+                                                                <input type="checkbox" class="install-checkbox" onChange="checkboxChange(this, \'install\');" id="{$module.whmcsmoduleid}">
                                                             {/if}
                                                         </td>
                                                         <td>{$module.name}</td>
@@ -1011,7 +989,9 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
 
     private function generateOutputJS($not_installed_modules, $installed_modules_ids)
     {
-        $dependencies_arr = $this->getDependenciesMap($not_installed_modules, $installed_modules_ids);
+        $dependencies_arr = $this->getDependenciesMap($not_installed_modules, $installed_modules_ids); // get dependencies for not installed modules
+        $dependencies_arr[] = $this->getDependenciesMap($installed_modules_ids, []); // get dependencies for installed modules
+        $dependencies_arr = json_encode($dependencies_arr);
         return <<<EOF
         <script type="text/javascript">
             var dependency_map = $dependencies_arr;
@@ -1201,7 +1181,8 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                 }
             }
             async function selectUnselectCheckboxs(selector, operation_type){
-                const checkboxes = $('tbody#notActiveOrInstalled input:checkbox');
+                var checkboxes = [];
+                checkboxes = operation_type == 'install'? $('tbody#notActiveOrInstalled input:checkbox') : $('tbody#installationTbody input:checkbox');
                 if($(selector).is(':checked')) {
                     for(const checkbox of checkboxes) {
                         $(checkbox).prop('checked', true);
@@ -1216,10 +1197,15 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                         let result = await checkDependency(module_id, 'unselect');
                     }
                 }
-                // .each() iterates over the array synchronously
-                checkboxChange(selector, 'install');
+                enableDisableBtn(operation_type);
             }
             async function checkboxChange(reference, operation_type){
+                if (operation_type == 'install'){
+
+                }
+                else{
+                }
+
                 let module_id = $(reference).attr('id');
                 if($(reference).is(':checked')) {
                     checkDependency(module_id, 'select');
@@ -1231,18 +1217,30 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                 enableDisableBtn(operation_type);
             }
             async function enableDisableBtn(operation_type){
-                let checkboxs =  $('.module-checkbox:checkbox:checked');
-                if(checkboxs.length == 0){
-                    $('#btn-install').prop('disabled', true);
+                let checkboxs = [];
+                let referenceBtn = undefined;
+                if (operation_type == 'install'){
+                    checkboxs = $('.install-checkbox:checkbox:checked');
+                    referenceBtn = $('#btn-install');
                 }
                 else{
-                    $('#btn-install').prop('disabled', false);
+                    checkboxs = $('.upgrade-checkbox:checkbox:checked');
+                    referenceBtn = $('#btn-upgrade');
                 }
+                if(checkboxs.length == 0){
+                    referenceBtn.prop('disabled', true);
+                }
+                else{
+                    referenceBtn.prop('disabled', false);
+                }
+            }
+            async function upgradeModules(){
+                alert(1);
             }
             async function installModules(){
                 let modules = [];
                 let success = true;
-                let checkboxs =  $('.module-checkbox:checkbox:checked');
+                let checkboxs =  $('.install-checkbox:checkbox:checked');
                 for (const checkbox of checkboxs){
                     // get module id from the checkbox
                     let module = $(checkbox).attr('id');
@@ -1274,7 +1272,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                     error: function (jqXHR, textStatus, errorThrown) { return false; }
                 });
                 // hide notification message
-                $('#installation-div').slideUp(500);
+                $('#installation-div').slideUp(100);
                 // check results
                 const data = JSON.parse(result.widgetOutput);
                 if (data.success){
