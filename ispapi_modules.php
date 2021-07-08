@@ -122,8 +122,8 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             "name" => "Registrar Module",
             "type" => "registrar",
             "deprecated" => false,
-            "cleanup_files" => ['/modules/registrar/ispapi'],
-            "install_files" => ['/modules/registrar/ispapi'],
+            "cleanup_files" => ['/modules/registrars/ispapi'],
+            "install_files" => ['/modules/registrars/ispapi'],
             "dependencies" => [
                 "required" => []
             ],
@@ -356,6 +356,18 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                     "result" => $results
                 ];
             } elseif ($action == "installModule") {
+                $dirs = $this->map[$module]['install_files'];
+                foreach ($dirs as $dir) {
+                    $dir_files = $this->checkDirAndFileRemovable(ROOTDIR . $dir, []);
+                    // the check permission
+                    $permission_check = $this->checkResults($dir_files);
+                    if ($permission_check['result'] == false) {
+                        return [
+                            "success" => false,
+                            "data" => $permission_check['msg']
+                        ];
+                    }
+                }
                 $results = $this->downloadUnzipGetContents($module);
                 if ($results['msg'] === 'success') {
                     return [
@@ -373,7 +385,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             } elseif ($action == "removeModule") {
                 $result = [];
                 try {
-                    $dirs = $this->map[$module]['install_files'];
+                    $dirs = $this->map[$module]['cleanup_files'];
                     if (!empty($dirs)) {
                         // check if files in all dirs are removable
                         foreach ($dirs as $dir) {
@@ -522,6 +534,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                         }
                     }
                 }
+                //var_dump($entries);
                 // extract files
                 $extract = $zip->extractTo(ROOTDIR . DIRECTORY_SEPARATOR, $entries);
                 if ($extract) {
@@ -989,9 +1002,9 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
 
     private function generateOutputJS($not_installed_modules, $installed_modules_ids)
     {
-        $dependencies_arr = $this->getDependenciesMap($not_installed_modules, $installed_modules_ids); // get dependencies for not installed modules
-        $dependencies_arr[] = $this->getDependenciesMap($installed_modules_ids, []); // get dependencies for installed modules
-        $dependencies_arr = json_encode($dependencies_arr);
+        $dependencies_arr_not_installed = $this->getDependenciesMap($not_installed_modules, $installed_modules_ids); // get dependencies for not installed modules
+        $dependencies_arr_installed = $this->getDependenciesMap($installed_modules_ids, []); // get dependencies for installed modules
+        $dependencies_arr = json_encode(array_merge($dependencies_arr_not_installed, $dependencies_arr_installed));
         return <<<EOF
         <script type="text/javascript">
             var dependency_map = $dependencies_arr;
@@ -1199,12 +1212,6 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                 enableDisableBtn(operation_type);
             }
             async function checkboxChange(reference, operation_type){
-                if (operation_type == 'install'){
-
-                }
-                else{
-                }
-
                 let module_id = $(reference).attr('id');
                 if($(reference).is(':checked')) {
                     checkDependency(module_id, 'select');
@@ -1281,6 +1288,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             }
             async function checkDependency(module_id, mode){
                 const dependency_list = dependency_map[module_id];
+                console.log(dependency_list);
                 // check if the module have at least one dependecy
                 if (dependency_list != undefined){
                     for (var key in dependency_list) {
