@@ -1,3 +1,10 @@
+## [2.2.1](https://github.com/hexonet/whmcs-ispapi-widget-modules/compare/v2.2.0...v2.2.1) (2021-07-08)
+
+
+### Bug Fixes
+
+* **semantic-release:** version update mechanism ([5bf5d0b](https://github.com/hexonet/whmcs-ispapi-widget-modules/commit/5bf5d0b993e9070948db55f7e5c4475b9e4a8d15))
+
 # [2.2.0](https://github.com/hexonet/whmcs-ispapi-widget-modules/compare/v2.1.1...v2.2.0) (2021-07-01)
 
 
