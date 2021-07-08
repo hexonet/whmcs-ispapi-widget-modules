@@ -785,7 +785,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                             <div class="tab-content small">
                                 <div id="tab1" class="tab-pane fade in active">
                                     {if $installed}
-                                        <table class="table table-bordered table-condensed" style="margin-top: 4px;">
+                                        <table class="table table-bordered table-condensed" style="margin-top: 4px; margin-bottom: 10px">
                                             <thead>
                                                 <tr>
                                                     <th scope="col" style="width: 5%"><input onChange="selectUnselectCheckboxs(this, \'upgrade\');" type="checkbox" class="form-check-input" id="checkallUpgrade"></th>
@@ -831,10 +831,10 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                                         </table>
                                        <div class="">
                                             <div class="col-sm-12" style="display: inline-flex; padding: 0px;">
-                                                <button disabled class="btn btn-success btn-sm" onclick="upgradeModules();" id="btn-upgrade">Upgrade Selected <i class="fas fa-arrow-right"></i></button>
-                                                <div class="text-warning" id="installation-div" style="display:none ;padding: 7px 0px 0px 10px;font-size: 10px;">
+                                                <button disabled class="btn btn-success btn-sm" onclick="installUpgradeModules(\'upgrade\');" id="btn-upgrade">Upgrade Selected <i class="fas fa-arrow-right"></i></button>
+                                                <div class="text-warning" id="upgrade-div" style="display:none ;padding: 7px 0px 0px 10px;font-size: 10px;">
                                                     <i class="fas fa-spinner fa-spin"></i>
-                                                    <span id="installation-notice" >Please wait, Upgrading x </span>
+                                                    <span id="upgrade-notice" >Please wait, Upgrading x </span>
                                                 </div>
                                             </div>
                                         </div>
@@ -893,7 +893,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                                         </table>
                                         <div class="">
                                             <div class="col-sm-12" style="display: inline-flex; padding: 0px;">
-                                                <button disabled class="btn btn-success btn-sm" onclick="installModules();" id="btn-install">Install Selected <i class="fas fa-arrow-right"></i></button>
+                                                <button disabled class="btn btn-success btn-sm" onclick="installUpgradeModules(\'install\');" id="btn-install">Install Selected <i class="fas fa-arrow-right"></i></button>
                                                 <div class="text-warning" id="installation-div" style="display:none ;padding: 7px 0px 0px 10px;font-size: 10px;">
                                                     <i class="fas fa-spinner fa-spin"></i>
                                                     <span id="installation-notice" >Please wait, Installing x </span>
@@ -1181,8 +1181,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                 }
             }
             async function selectUnselectCheckboxs(selector, operation_type){
-                var checkboxes = [];
-                checkboxes = operation_type == 'install'? $('tbody#notActiveOrInstalled input:checkbox') : $('tbody#installationTbody input:checkbox');
+                var checkboxes = operation_type == 'install'? $('tbody#notActiveOrInstalled input:checkbox') : $('tbody#installationTbody input:checkbox');
                 if($(selector).is(':checked')) {
                     for(const checkbox of checkboxes) {
                         $(checkbox).prop('checked', true);
@@ -1234,35 +1233,32 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                     referenceBtn.prop('disabled', false);
                 }
             }
-            async function upgradeModules(){
-                alert(1);
-            }
-            async function installModules(){
+            async function installUpgradeModules(operation){
                 let modules = [];
                 let success = true;
-                let checkboxs =  $('.install-checkbox:checkbox:checked');
+                let checkboxs =  operation == 'install'? $('.install-checkbox:checkbox:checked') : $('.upgrade-checkbox:checkbox:checked');
                 for (const checkbox of checkboxs){
                     // get module id from the checkbox
                     let module = $(checkbox).attr('id');
                     // install the module
-                    let result = await installSingleModule(module, 'module');
+                    let result = await installSingleModule(module, operation);
                     if (typeof result != "boolean"){
                         success = false;
                         $('.modal-body-alert').html(result);
                         $('#alertModalOther').modal('show');
-                        $('#installation-div').slideUp(100);
+                        operation == 'install'? $('#installation-div').slideUp(100) : $('#upgrade-div').slideUp(100);
                     }
                 }
                 if (success){
-                    const msg = "Installation finished successfully!";
+                    const msg = operation == 'install'? "Installation finished successfully!" : "Upgrade finished successfully!";
                     $('.modal-body').html(msg);
                     $('#alertModal').modal('show');
                 }
             }
-            async function installSingleModule(module_id, installation_case = ''){
+            async function installSingleModule(module_id, operation){
                 // show & update notification message
-                $('#installation-div').slideDown(500);
-                $('#installation-notice').html('Please wait, installing <b>' + installation_case + '</b> : ' + module_id);
+                operation == 'install'? $('#installation-div').slideDown(500) : $('#upgrade-div').slideDown(500);
+                operation == 'install'? $('#installation-notice').html('Please wait, installing: ' + module_id) : $('#upgrade-notice').html('Please wait, upgrading: ' + module_id);
                 // send xhr request
                 const url = WHMCS.adminUtils.getAdminRouteUrl('/widget/refresh&widget=IspapiModulesWidget&module='+ module_id + '&action=installModule');
                 const result = await $.ajax({
@@ -1272,7 +1268,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                     error: function (jqXHR, textStatus, errorThrown) { return false; }
                 });
                 // hide notification message
-                $('#installation-div').slideUp(100);
+                operation == 'install'? $('#installation-div').slideUp(100) : $('#upgrade-div').slideUp(100);
                 // check results
                 const data = JSON.parse(result.widgetOutput);
                 if (data.success){
