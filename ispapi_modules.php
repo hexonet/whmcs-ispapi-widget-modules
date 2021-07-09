@@ -355,19 +355,23 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                     "module" => $module,
                     "result" => $results
                 ];
-            } elseif ($action == "installModule") {
-                $dirs = $this->map[$module]['install_files'];
-                foreach ($dirs as $dir) {
-                    $dir_files = $this->checkDirAndFileRemovable(ROOTDIR . $dir, []);
-                    // the check permission
-                    $permission_check = $this->checkResults($dir_files);
-                    if ($permission_check['result'] == false) {
-                        return [
-                            "success" => false,
-                            "data" => $permission_check['msg']
-                        ];
+            } elseif ($action == "installModule" || $action == "upgradeModule") {
+                // if upgrade check the permission
+                if ($action == "upgradeModule") {
+                    $dirs = $this->map[$module]['install_files'];
+                    foreach ($dirs as $dir) {
+                        $dir_files = $this->checkDirAndFileRemovable(ROOTDIR . $dir, []);
+                        // the check permission
+                        $permission_check = $this->checkResults($dir_files);
+                        if ($permission_check['result'] == false) {
+                            return [
+                                "success" => false,
+                                "data" => $permission_check['msg']
+                            ];
+                        }
                     }
                 }
+
                 $results = $this->downloadUnzipGetContents($module);
                 if ($results['msg'] === 'success') {
                     return [
@@ -619,9 +623,13 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
         foreach ($registrar->getList() as $module) {
             if (preg_match("/^ispapi/i", $module)) {
                 $registrar->load($module);
+                // var_dump($registrar->load($module));
+                //var_dump($module, $registrar->functionExists("getRegistrarModuleVersion"));
                 if ($registrar->isActivated()) {
                     $md = $this->getModuleData($module, 'active');
                     if ($md !== false) {
+                        // add the current version
+                        // $d = call_user_func("getRegistrarModuleVersion", $md["whmcsid"]);
                         $modules[] = $md;
                         $installed_modules_ids[] = $module;
                     }
@@ -636,6 +644,11 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             if (in_array($module, $activemodules) && preg_match("/^ispapi/i", $module) && !preg_match("/\_addon$/i", $module)) {
                 $md = $this->getModuleData($module, 'active');
                 if ($md !== false) {
+                    // add the current version
+                    // $addon->load($module);
+                    // $d = call_user_func($module . "_config");
+                    // $md['version_used'] = $d["version"];
+                    // add to the array
                     $modules[] = $md;
                     $installed_modules_ids[] = $module;
                 }
@@ -648,6 +661,11 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             if (preg_match("/^ispapi/i", $module)) {
                 $md = $this->getModuleData($module, 'active');
                 if ($md !== false) {
+                    // get the current version
+                    // $server->load($module);
+                    // $v = $server->getMetaDataValue("MODULEVersion");
+                    // $md['version_used'] = empty($v) ? "old" : $v;
+                    // add to the array of modules
                     $modules[] = $md;
                     $installed_modules_ids[] = $module;
                 }
@@ -660,6 +678,17 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
             if (preg_match("/^ispapi/i", $module)) {
                 $md = $this->getModuleData(str_replace("_", "widget", $module), 'active');
                 if ($md !== false) {
+                    // add the current version
+                    // $widget->load($module);
+                    // $tmp = explode("_", $module);
+                    // $widgetClass = "\\WHMCS\Module\Widget\\" . ucfirst($tmp[0]) . ucfirst($tmp[1]) . "Widget";
+                    // $mname = $tmp[0] . "widget" . $tmp[1];
+                    // if (class_exists($widgetClass) && defined("$widgetClass::VERSION")) {
+                    //     $md['version_used'] = $widgetClass::VERSION;
+                    // } else {
+                    //     $md['version_used'] = "n/a";
+                    // }
+                    // add to the array of modules
                     $modules[] = $md;
                     $installed_modules_ids[] = str_replace("_", "widget", $module);
                 }
@@ -1267,7 +1296,7 @@ class IspapiModulesWidget extends \WHMCS\Module\AbstractWidget
                 operation == 'install'? $('#installation-div').slideDown(500) : $('#upgrade-div').slideDown(500);
                 operation == 'install'? $('#installation-notice').html('Please wait, installing: ' + module_id) : $('#upgrade-notice').html('Please wait, upgrading: ' + module_id);
                 // send xhr request
-                const url = WHMCS.adminUtils.getAdminRouteUrl('/widget/refresh&widget=IspapiModulesWidget&module='+ module_id + '&action=installModule');
+                const url = WHMCS.adminUtils.getAdminRouteUrl('/widget/refresh&widget=IspapiModulesWidget&module='+ module_id + '&action=' + operation +'Module');
                 const result = await $.ajax({
                     url: url,
                     type: 'GET',
